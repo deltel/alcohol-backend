@@ -1,14 +1,14 @@
 import express from 'express';
 
 import connection from '../db/connection';
-import { Product, ProductPreview } from '../contracts/products';
+import { Product, ProductPreview } from '../contracts/product';
 import { RowDataPacket } from 'mysql2';
 
 const router = express.Router();
 
 router.get('/', (_, res) => {
     connection.query<RowDataPacket[]>(
-        'SELECT * FROM `products`',
+        'SELECT product_id, product_name, stock_level FROM `products`',
         function (error, results) {
             if (error) {
                 console.error('error querying table', error);
