@@ -1,7 +1,9 @@
 import express from 'express';
 import connection from '../db/connection';
 import { RowDataPacket } from 'mysql2';
+
 import { Customer, CustomerPreview } from '../contracts/customer';
+import { FavouriteProduct } from '../contracts/product';
 
 const router = express.Router();
 
@@ -58,7 +60,28 @@ router.get('/:customerId', (req, res) => {
 });
 
 router.get('/:customerId/favourites', (req, res) => {
-    res.send('Get most popular orders for customer');
+    const customerId = req.params.customerId;
+    connection.execute<RowDataPacket[]>(
+        'SELECT products.product_name AS product_name, SUM(orders.revenue) AS revenue, SUM(orders.quantity) AS quantity FROM products INNER JOIN orders ON orders.product_id = products.product_id WHERE orders.customer_id = ? GROUP BY products.product_name ORDER BY quantity DESC LIMIT 3',
+        [customerId],
+        function (error, results) {
+            if (error) {
+                console.error('error querying table', error);
+                res.send({
+                    error: 'An error occurred while querying database',
+                });
+            }
+
+            const favourites: FavouriteProduct[] = results.map((product) => ({
+                productName: product.product_name,
+                totalRevenue: product.revenue,
+            }));
+
+            console.log(`Retrieved favourites for customer id ${customerId}`);
+
+            res.send({ favourites });
+        }
+    );
 });
 
 export default router;
