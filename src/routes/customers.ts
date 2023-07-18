@@ -10,7 +10,7 @@ const router = express.Router();
 
 router.get('/', (_, res) => {
     connection.query<RowDataPacket[]>(
-        "SELECT CONCAT(customer_id, ' ', first_name) AS customer_name, last_name, balance FROM `customers`",
+        "SELECT customer_id, CONCAT(first_name, ' ', last_name) AS customer_name, last_name, balance FROM `customers`",
         function (error, results) {
             if (error) {
                 console.error('error querying table', error);

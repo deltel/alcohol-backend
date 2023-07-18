@@ -1,8 +1,9 @@
 import express from 'express';
+import { RowDataPacket } from 'mysql2';
 
 import connection from '../db/connection';
-import { Product, ProductPreview } from '../contracts/product';
-import { RowDataPacket } from 'mysql2';
+
+import { ProductPreview, ProductSummary } from '../contracts/product';
 import { ProductOrder, RestockOrder } from '../contracts/order';
 
 const router = express.Router();
@@ -43,7 +44,7 @@ router.get('/:productId', (req, res) => {
                 });
             }
 
-            const product: Product = {
+            const product: ProductSummary = {
                 productId: results[0].product_id,
                 productName: results[0].product_name,
                 stockLevel: results[0].stock_level,
@@ -118,6 +119,30 @@ router.get('/:productId/orders/recent', (req, res) => {
             );
 
             res.send({ orders });
+        }
+    );
+});
+
+router.post('/new', (req, res) => {
+    const insertValues: (string | number)[][] = [
+        Object.values(req.body.product),
+    ];
+
+    connection.query(
+        'INSERT INTO products (product_name, volume, stock_level, unit_cost, selling_price, wholesale_price, total_value, total_orders, total_cost, total_revenue, total_profit) VALUES ?',
+        [insertValues],
+        function (error) {
+            if (error) {
+                console.error('error querying table', error);
+                res.send({
+                    error: 'An error occurred while querying database',
+                });
+                return;
+            }
+
+            console.log('Added new product');
+
+            res.send('Successfully added new product');
         }
     );
 });

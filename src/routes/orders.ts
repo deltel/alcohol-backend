@@ -2,7 +2,7 @@ import express from 'express';
 import { RowDataPacket } from 'mysql2';
 
 import connection from '../db/connection';
-import { DateOrder } from '../contracts/order';
+import { DateOrder, Order } from '../contracts/order';
 
 const router = express.Router();
 
@@ -30,6 +30,64 @@ router.get('', (req, res) => {
             res.send({ orders });
         }
     );
+});
+
+router.post('/new', (req, res) => {
+    const insertValues: (string | number)[][] = req.body.orders.map(
+        (order: Order) => [
+            order.productId,
+            order.customerId,
+            order.dateOrdered,
+            order.purchaseLocation,
+            order.datePaid,
+            order.orderType,
+            order.quantity,
+            order.cost,
+            order.revenue,
+            order.profit,
+        ]
+    );
+
+    connection.query(
+        'INSERT INTO orders (product_id, customer_id, date_ordered, purchase_location, date_paid, order_type, quantity, cost, revenue, profit) VALUES ?',
+        [insertValues],
+        function (error, results) {
+            if (error) {
+                console.error('error querying table', error);
+                res.send({
+                    error: 'An error occurred while querying database',
+                });
+                return;
+            }
+
+            console.log('Successfully added orders', results);
+        }
+    );
+
+    const updateValues = insertValues.map((order) => [
+        order[6],
+        order[7],
+        order[0],
+    ]);
+
+    updateValues.forEach((order) => {
+        connection.query(
+            'UPDATE products SET stock_level = stock_level + ?, total_cost = total_cost + ? WHERE product_id = ?',
+            [...order],
+            function (error) {
+                if (error) {
+                    console.error('error querying table', error);
+                    res.send({
+                        error: 'An error occurred while querying database',
+                    });
+                    return;
+                }
+
+                console.log('Successfully updated product with id', order[2]);
+            }
+        );
+    });
+    res.send('created new order');
 });
 
 export default router;

@@ -5,6 +5,7 @@ import customerRouter from './routes/customers';
 import orderRouter from './routes/orders';
 
 const app = express();
+app.use(express.json());
 
 app.use('/products', productRouter);
 app.use('/customers', customerRouter);
