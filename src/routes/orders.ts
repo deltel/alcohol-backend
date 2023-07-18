@@ -2,7 +2,7 @@ import express from 'express';
 import { RowDataPacket } from 'mysql2';
 
 import connection from '../db/connection';
-import { DateOrder, Order } from '../contracts/order';
+import { DateOrder, Order, OrderType } from '../contracts/order';
 
 const router = express.Router();
 
@@ -51,7 +51,7 @@ router.post('/new', (req, res) => {
     connection.query(
         'INSERT INTO orders (product_id, customer_id, date_ordered, purchase_location, date_paid, order_type, quantity, cost, revenue, profit) VALUES ?',
         [insertValues],
-        function (error, results) {
+        function (error) {
             if (error) {
                 console.error('error querying table', error);
                 res.send({
@@ -60,12 +60,12 @@ router.post('/new', (req, res) => {
                 return;
             }
 
-            console.log('Successfully added orders', results);
+            console.log('Successfully added orders');
         }
     );
 
     const updateValues =
-        req.body.orders[0].orderType === 'restock'
+        req.body.orders[0].orderType === OrderType.RESTOCK
             ? req.body.orders.map((order: Order) => [
                   order.quantity,
                   order.cost,
@@ -79,7 +79,7 @@ router.post('/new', (req, res) => {
               ]);
 
     const queryString =
-        req.body.orders[0].orderType === 'restock'
+        req.body.orders[0].orderType === OrderType.RESTOCK
             ? 'UPDATE products SET stock_level = stock_level + ?, total_cost = total_cost + ?, total_value = total_value + ? WHERE product_id = ?'
             : 'UPDATE products SET stock_level = stock_level - ?, total_value = total_value - ? WHERE product_id = ?';
 
@@ -96,6 +96,30 @@ router.post('/new', (req, res) => {
             console.log('Successfully updated product');
         });
     });
+
+    if (req.body.orders[0].orderType === OrderType.SALE) {
+        const customerBalance = req.body.orders.reduce(
+            (accumulator: number, currentValue: Order) =>
+                accumulator + currentValue.revenue,
+            0
+        );
+
+        connection.execute(
+            'UPDATE customers SET balance = balance + ? WHERE customer_id = ?',
+            [customerBalance, req.body.orders[0].customerId],
+            function (error) {
+                if (error) {
+                    console.error('error querying table', error);
+                    res.send({
+                        error: 'An error occurred while querying database',
+                    });
+                    return;
+                }
+
+                console.log('Successfully updated customer balance');
+            }
+        );
+    }
     res.send('created new order');
 });
 
