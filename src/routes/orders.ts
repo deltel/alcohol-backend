@@ -64,28 +64,37 @@ router.post('/new', (req, res) => {
         }
     );
 
-    const updateValues = insertValues.map((order) => [
-        order[6],
-        order[7],
-        order[0],
-    ]);
+    const updateValues =
+        req.body.orders[0].orderType === 'restock'
+            ? req.body.orders.map((order: Order) => [
+                  order.quantity,
+                  order.cost,
+                  order.value,
+                  order.productId,
+              ])
+            : req.body.orders.map((order: Order) => [
+                  order.quantity,
+                  order.revenue,
+                  order.productId,
+              ]);
 
-    updateValues.forEach((order) => {
-        connection.query(
-            'UPDATE products SET stock_level = stock_level + ?, total_cost = total_cost + ? WHERE product_id = ?',
-            [...order],
-            function (error) {
-                if (error) {
-                    console.error('error querying table', error);
-                    res.send({
-                        error: 'An error occurred while querying database',
-                    });
-                    return;
-                }
+    const queryString =
+        req.body.orders[0].orderType === 'restock'
+            ? 'UPDATE products SET stock_level = stock_level + ?, total_cost = total_cost + ?, total_value = total_value + ? WHERE product_id = ?'
+            : 'UPDATE products SET stock_level = stock_level - ?, total_value = total_value - ? WHERE product_id = ?';
 
-                console.log('Successfully updated product with id', order[2]);
+    updateValues.forEach((order: (string | number)[]) => {
+        connection.query(queryString, [...order], function (error) {
+            if (error) {
+                console.error('error querying table', error);
+                res.send({
+                    error: 'An error occurred while querying database',
+                });
+                return;
             }
-        );
+
+            console.log('Successfully updated product');
+        });
     });
     res.send('created new order');
 });

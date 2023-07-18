@@ -10,11 +10,12 @@ export interface Product {
     totalCost: number;
     totalRevenue: number;
     totalProfit: number;
+    volume: string;
 }
 
-export type ProductSummary = Omit<
+export type CustomerProduct = Pick<
     Product,
-    'unitCost' | 'sellingPrice' | 'wholesalePrice'
+    'productId' | 'productName' | 'sellingPrice' | 'stockLevel' | 'volume'
 >;
 
 export type ProductPreview = Pick<

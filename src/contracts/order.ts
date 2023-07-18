@@ -15,16 +15,31 @@ export interface Order {
     cost: number;
     revenue: number;
     profit: number;
+    value: number;
 }
 
-export type ProductOrder = Omit<Order, 'cost' | 'productId' | 'customerId'>;
+export type ProductOrder = Omit<
+    Order,
+    'cost' | 'productId' | 'customerId' | 'value'
+>;
 export type CustomerOrder = Omit<
     Order,
-    'purchaseLocation' | 'orderType' | 'cost' | 'productId' | 'customerId'
+    | 'purchaseLocation'
+    | 'orderType'
+    | 'cost'
+    | 'productId'
+    | 'customerId'
+    | 'value'
 >;
 export type RestockOrder = Omit<
     Order,
-    'datePaid' | 'orderType' | 'revenue' | 'profit' | 'productId' | 'customerId'
+    | 'datePaid'
+    | 'orderType'
+    | 'revenue'
+    | 'profit'
+    | 'productId'
+    | 'customerId'
+    | 'value'
 >;
 
 export interface DateOrder {
