@@ -1,19 +1,13 @@
-import mysql from 'mysql2';
+import mysql from 'mysql2/promise';
 
-const connection = mysql.createConnection({
+const pool = mysql.createPool({
     host: process.env.HOST,
     user: process.env.USER,
     password: process.env.PASSWORD,
     database: process.env.DATABASE,
+    connectionLimit: +process.env.CONNECTION_LIMIT!,
+    maxIdle: +process.env.MAX_IDLE!,
+    idleTimeout: +process.env.IDLE_TIMEOUT!,
 });
 
-connection.connect(function (err) {
-    if (err) {
-        console.error('error connecting: ' + err.stack);
-        return;
-    }
-
-    console.log('connected as id ' + connection.threadId);
-});
-
-export default connection;
+export default pool;
