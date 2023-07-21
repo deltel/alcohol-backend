@@ -75,13 +75,14 @@ router.post('/new', (req, res) => {
             : req.body.orders.map((order: Order) => [
                   order.quantity,
                   order.revenue,
+                  order.quantity,
                   order.productId,
               ]);
 
     const queryString =
         req.body.orders[0].orderType === OrderType.RESTOCK
             ? 'UPDATE products SET stock_level = stock_level + ?, total_cost = total_cost + ?, total_value = total_value + ? WHERE product_id = ?'
-            : 'UPDATE products SET stock_level = stock_level - ?, total_value = total_value - ? WHERE product_id = ?';
+            : 'UPDATE products SET stock_level = stock_level - ?, total_value = total_value - ?, total_orders = total_orders + ? WHERE product_id = ?';
 
     updateValues.forEach((order: (string | number)[]) => {
         connection.query(queryString, [...order], function (error) {
@@ -121,6 +122,119 @@ router.post('/new', (req, res) => {
         );
     }
     res.send('created new order');
+});
+
+router.post('/:orderId/pay', (req, res) => {
+    const orderId = req.params.orderId;
+
+    const orderData = {
+        revenue: null,
+        customerId: null,
+        productId: null,
+        profit: null,
+    };
+
+    connection.execute<RowDataPacket[]>(
+        'SELECT revenue, customer_id, product_id FROM orders WHERE order_id = ?',
+        [orderId],
+        function (error, results) {
+            if (error) {
+                console.error('error querying table', error);
+                res.send({
+                    error: 'An error occurred while querying database',
+                });
+                return;
+            }
+
+            orderData.revenue = results[0].revenue;
+            orderData.customerId = results[0].customer_id;
+            orderData.productId = results[0].product_id;
+
+            console.log('Successfully retrieved order data');
+
+            connection.execute<RowDataPacket[]>(
+                'SELECT selling_price - unit_cost AS profit FROM products WHERE product_id = ?',
+                [orderData.productId],
+                function (error, results) {
+                    if (error) {
+                        console.error('error querying table', error);
+                        res.send({
+                            error: 'An error occurred while querying database',
+                        });
+                        return;
+                    }
+
+                    orderData.profit = results[0].profit;
+
+                    console.log('Successfully retrieved the profit');
+
+                    connection.execute(
+                        'UPDATE orders SET date_paid = CURDATE(), profit = ? WHERE order_id = ?',
+                        [orderData.profit, orderId],
+                        function (error) {
+                            if (error) {
+                                console.error('error querying table', error);
+                                res.send({
+                                    error: 'An error occurred while querying database',
+                                });
+                                return;
+                            }
+
+                            console.log('Successfully updated paid order');
+
+                            connection.execute(
+                                'UPDATE customers SET balance = balance - ? WHERE customer_id = ?',
+                                [orderData.revenue, orderData.customerId],
+                                function (error) {
+                                    if (error) {
+                                        console.error(
+                                            'error querying table',
+                                            error
+                                        );
+                                        res.send({
+                                            error: 'An error occurred while querying database',
+                                        });
+                                        return;
+                                    }
+
+                                    console.log(
+                                        'Successfully updated customer balance'
+                                    );
+
+                                    connection.execute(
+                                        'UPDATE products SET total_revenue = total_revenue + ?, total_profit = total_profit + ? WHERE product_id = ?',
+                                        [
+                                            orderData.revenue,
+                                            orderData.profit,
+                                            orderData.productId,
+                                        ],
+                                        function (error) {
+                                            if (error) {
+                                                console.error(
+                                                    'error querying table',
+                                                    error
+                                                );
+                                                res.send({
+                                                    error: 'An error occurred while querying database',
+                                                });
+                                                return;
+                                            }
+
+                                            console.log(
+                                                'Successfully updated profits for product'
+                                            );
+                                        }
+                                    );
+                                }
+                            );
+                        }
+                    );
+                }
+            );
+        }
+    );
+
+    res.send('payment made');
 });
 
 export default router;
