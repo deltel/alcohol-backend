@@ -139,9 +139,7 @@ router.get('/:productId', async (req, res, next) => {
 
 router.post('/new', async (req, res, next) => {
     try {
-        const insertValues: (string | number)[][] = [
-            Object.values(req.body.product),
-        ];
+        const insertValues: (string | number)[][] = [Object.values(req.body)];
 
         await pool.query(
             'INSERT INTO products (product_name, volume, stock_level, unit_cost, selling_price, wholesale_price, total_value, total_orders, total_cost, total_revenue, total_profit) VALUES ?',
@@ -150,7 +148,7 @@ router.post('/new', async (req, res, next) => {
 
         console.log('Added new product');
 
-        res.send('Successfully added new product');
+        res.send({ message: 'Successfully added new product' });
     } catch (e: any) {
         e.customMessage = 'Failed to add product';
         next(e);

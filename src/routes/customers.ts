@@ -105,4 +105,24 @@ router.get('/:customerId/orders', async (req, res, next) => {
     }
 });
 
+router.post('/new', async (req, res, next) => {
+    const { firstName, lastName } = req.body;
+
+    try {
+        const insertValues: (string | number)[][] = [[firstName, lastName, 0]];
+
+        await pool.query(
+            'INSERT INTO customers (first_name, last_name, balance) VALUES ?',
+            [insertValues]
+        );
+
+        console.log('Added new customer');
+
+        res.send({ message: 'Successfully registered customer' });
+    } catch (e: any) {
+        e.customMessage = 'Failed to register customer';
+        next(e);
+    }
+});
+
 export default router;
