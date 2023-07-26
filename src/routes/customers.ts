@@ -4,14 +4,12 @@ import { Customer, CustomerPreview } from '../contracts/customer';
 import { FavouriteProduct } from '../contracts/product';
 import { CustomerOrder } from '../contracts/order';
 
-import {
-    executePreparedStatement,
-    queryWithValues,
-    query,
-} from '../db/queries';
-import { hashPassword } from '../utils/password';
+import { executePreparedStatement, query } from '../db/queries';
+import { auth } from '../middleware/auth';
 
 const router = express.Router();
+
+router.use(auth);
 
 router.get('/', async (_, res, next) => {
     try {
@@ -107,30 +105,6 @@ router.get('/:customerId/orders', async (req, res, next) => {
         res.send({ orders });
     } catch (e: any) {
         e.customMessage = 'Failed to retrieve orders';
-        next(e);
-    }
-});
-
-router.post('/new', async (req, res, next) => {
-    const { firstName, lastName, email, telephone, password } = req.body;
-
-    try {
-        const hashedPassword = await hashPassword(password);
-
-        const insertValues: (string | number)[][] = [
-            [firstName, lastName, email, telephone, hashedPassword],
-        ];
-
-        await queryWithValues(
-            'INSERT INTO customers (first_name, last_name, email, telephone, password) VALUES ?',
-            [insertValues]
-        );
-
-        console.log('Added new customer');
-
-        res.send({ message: 'Successfully registered customer' });
-    } catch (e: any) {
-        e.customMessage = 'Failed to register customer';
         next(e);
     }
 });

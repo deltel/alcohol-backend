@@ -7,8 +7,10 @@ import {
     queryWithValues,
     query,
 } from '../db/queries';
+import { auth } from '../middleware/auth';
 
 const router = express.Router();
+router.use(auth);
 
 router.get('/', async (_, res, next) => {
     try {
