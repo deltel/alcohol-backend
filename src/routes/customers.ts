@@ -9,6 +9,7 @@ import {
     queryWithValues,
     query,
 } from '../db/queries';
+import { hashPassword } from '../utils/password';
 
 const router = express.Router();
 
@@ -114,8 +115,10 @@ router.post('/new', async (req, res, next) => {
     const { firstName, lastName, email, telephone, password } = req.body;
 
     try {
+        const hashedPassword = await hashPassword(password);
+
         const insertValues: (string | number)[][] = [
-            [firstName, lastName, email, telephone, password],
+            [firstName, lastName, email, telephone, hashedPassword],
         ];
 
         await queryWithValues(
