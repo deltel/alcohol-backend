@@ -1,15 +1,14 @@
 import express from 'express';
-import { RowDataPacket } from 'mysql2';
 
-import pool from '../db/connection';
 import { DateOrder, Order, OrderType } from '../contracts/order';
+import { queryWithValues, executePreparedStatement } from '../db/queries';
 
 const router = express.Router();
 
 router.get('', async (req, res, next) => {
     try {
         const date = req.query.date as string;
-        const [results] = await pool.execute<RowDataPacket[]>(
+        const [results] = await executePreparedStatement(
             "SELECT CONCAT(first_name, ' ', last_name) AS customer_name, GROUP_CONCAT(CONCAT(product_name, ': ', quantity)) AS details, SUM(revenue) AS revenue FROM orders INNER JOIN products ON orders.product_id = products.product_id INNER JOIN customers ON orders.customer_id = customers.customer_id WHERE orders.date_ordered = ? AND orders.order_type = 'sale' GROUP BY customer_name",
             [date]
         );
@@ -46,7 +45,7 @@ router.post('/new', async (req, res, next) => {
             ]
         );
 
-        await pool.query(
+        await queryWithValues(
             'INSERT INTO orders (product_id, customer_id, date_ordered, purchase_location, date_paid, order_type, quantity, cost, revenue, profit) VALUES ?',
             [insertValues]
         );
@@ -73,7 +72,7 @@ router.post('/new', async (req, res, next) => {
                 : 'UPDATE products SET stock_level = stock_level - ?, total_value = total_value - ?, total_orders = total_orders + ? WHERE product_id = ?';
 
         updateValues.forEach(async (order: (string | number)[]) => {
-            await pool.query(queryString, [...order]);
+            await queryWithValues(queryString, [...order]);
 
             console.log('Successfully updated product');
         });
@@ -85,7 +84,7 @@ router.post('/new', async (req, res, next) => {
                 0
             );
 
-            await pool.execute(
+            await executePreparedStatement(
                 'UPDATE customers SET balance = balance + ? WHERE customer_id = ?',
                 [customerBalance, req.body.orders[0].customerId]
             );
@@ -110,7 +109,7 @@ router.post('/:orderId/pay', async (req, res, next) => {
             profit: null,
         };
 
-        let [results] = await pool.execute<RowDataPacket[]>(
+        let [results] = await executePreparedStatement(
             'SELECT revenue, customer_id, product_id FROM orders WHERE order_id = ?',
             [orderId]
         );
@@ -121,7 +120,7 @@ router.post('/:orderId/pay', async (req, res, next) => {
 
         console.log('Successfully retrieved order data');
 
-        [results] = await pool.execute<RowDataPacket[]>(
+        [results] = await executePreparedStatement(
             'SELECT selling_price - unit_cost AS profit FROM products WHERE product_id = ?',
             [orderData.productId]
         );
@@ -129,20 +128,20 @@ router.post('/:orderId/pay', async (req, res, next) => {
 
         console.log('Successfully retrieved the profit');
 
-        await pool.execute(
+        await executePreparedStatement(
             'UPDATE orders SET date_paid = CURDATE(), profit = ? WHERE order_id = ?',
             [orderData.profit, orderId]
         );
         console.log('Successfully updated paid order');
 
-        await pool.execute(
+        await executePreparedStatement(
             'UPDATE customers SET balance = balance - ? WHERE customer_id = ?',
             [orderData.revenue, orderData.customerId]
         );
 
         console.log('Successfully updated customer balance');
 
-        await pool.execute(
+        await executePreparedStatement(
             'UPDATE products SET total_revenue = total_revenue + ?, total_profit = total_profit + ? WHERE product_id = ?',
             [orderData.revenue, orderData.profit, orderData.productId]
         );

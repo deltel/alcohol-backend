@@ -1,16 +1,18 @@
 import express from 'express';
-import { RowDataPacket } from 'mysql2';
-
-import pool from '../db/connection';
 
 import { Product, ProductPreview, CustomerProduct } from '../contracts/product';
 import { ProductOrder, RestockOrder } from '../contracts/order';
+import {
+    executePreparedStatement,
+    queryWithValues,
+    query,
+} from '../db/queries';
 
 const router = express.Router();
 
 router.get('/', async (_, res, next) => {
     try {
-        const [results] = await pool.query<RowDataPacket[]>(
+        const [results] = await query(
             'SELECT product_id, product_name, stock_level FROM `products`'
         );
 
@@ -31,7 +33,7 @@ router.get('/', async (_, res, next) => {
 router.get('/:productId/orders/recent', async (req, res, next) => {
     try {
         const productId = req.params.productId;
-        const [results] = await pool.execute<RowDataPacket[]>(
+        const [results] = await executePreparedStatement(
             "SELECT date_ordered, product_name, purchase_location, quantity, cost FROM orders INNER JOIN products ON orders.product_id = products.product_id WHERE orders.product_id = ? AND order_type = 'restock' ORDER BY date_ordered DESC LIMIT 10",
             [productId]
         );
@@ -58,7 +60,7 @@ router.get('/:productId/orders/recent', async (req, res, next) => {
 router.get('/:productId/orders', async (req, res, next) => {
     try {
         const productId = req.params.productId;
-        const [results] = await pool.execute<RowDataPacket[]>(
+        const [results] = await executePreparedStatement(
             'SELECT date_ordered, date_paid, product_name, order_type, purchase_location, quantity, revenue, profit FROM orders INNER JOIN products ON orders.product_id = products.product_id WHERE orders.product_id = ?',
             [productId]
         );
@@ -85,7 +87,7 @@ router.get('/:productId/orders', async (req, res, next) => {
 
 router.get('/:productId/admin', async (req, res, next) => {
     try {
-        const [results] = await pool.execute<RowDataPacket[]>(
+        const [results] = await executePreparedStatement(
             'SELECT product_id, product_name, stock_level, unit_cost, selling_price, wholesale_price, total_cost, total_orders, total_profit, total_revenue, total_value, volume FROM `products` WHERE `product_id` = ?',
             [req.params.productId]
         );
@@ -115,7 +117,7 @@ router.get('/:productId/admin', async (req, res, next) => {
 
 router.get('/:productId', async (req, res, next) => {
     try {
-        const [results] = await pool.execute<RowDataPacket[]>(
+        const [results] = await executePreparedStatement(
             'SELECT product_id, product_name, stock_level, selling_price, volume FROM `products` WHERE `product_id` = ?',
             [req.params.productId]
         );
@@ -141,7 +143,7 @@ router.post('/new', async (req, res, next) => {
     try {
         const insertValues: (string | number)[][] = [Object.values(req.body)];
 
-        await pool.query(
+        await queryWithValues(
             'INSERT INTO products (product_name, volume, stock_level, unit_cost, selling_price, wholesale_price, total_value, total_orders, total_cost, total_revenue, total_profit) VALUES ?',
             [insertValues]
         );

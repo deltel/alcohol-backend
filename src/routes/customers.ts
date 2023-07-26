@@ -1,16 +1,20 @@
 import express from 'express';
-import { RowDataPacket } from 'mysql2';
 
 import { Customer, CustomerPreview } from '../contracts/customer';
 import { FavouriteProduct } from '../contracts/product';
 import { CustomerOrder } from '../contracts/order';
 
-import pool from '../db/connection';
+import {
+    executePreparedStatement,
+    queryWithValues,
+    query,
+} from '../db/queries';
+
 const router = express.Router();
 
 router.get('/', async (_, res, next) => {
     try {
-        const [results] = await pool.query<RowDataPacket[]>(
+        const [results] = await query(
             "SELECT customer_id, CONCAT(first_name, ' ', last_name) AS customer_name, last_name, balance FROM `customers`"
         );
 
@@ -31,8 +35,8 @@ router.get('/', async (_, res, next) => {
 
 router.get('/:customerId', async (req, res, next) => {
     try {
-        const [results] = await pool.execute<RowDataPacket[]>(
-            "SELECT customer_id, CONCAT(customer_id, ' ', first_name) AS customer_name, balance_due_date, balance, (SELECT COUNT(order_id) FROM `orders` WHERE orders.customer_id = ?) AS total_orders, (SELECT SUM(revenue) FROM `orders` WHERE orders.customer_id = ?) AS total_revenue FROM `customers` WHERE customer_id = ?",
+        const [results] = await executePreparedStatement(
+            "SELECT customer_id, CONCAT(first_name, ' ', last_name) AS customer_name, balance_due_date, balance, (SELECT COUNT(order_id) FROM `orders` WHERE orders.customer_id = ?) AS total_orders, (SELECT SUM(revenue) FROM `orders` WHERE orders.customer_id = ?) AS total_revenue FROM `customers` WHERE customer_id = ?",
             [
                 req.params.customerId,
                 req.params.customerId,
@@ -61,7 +65,7 @@ router.get('/:customerId', async (req, res, next) => {
 router.get('/:customerId/favourites', async (req, res, next) => {
     try {
         const customerId = req.params.customerId;
-        const [results] = await pool.execute<RowDataPacket[]>(
+        const [results] = await executePreparedStatement(
             'SELECT products.product_name AS product_name, SUM(orders.revenue) AS revenue, SUM(orders.quantity) AS quantity FROM products INNER JOIN orders ON orders.product_id = products.product_id WHERE orders.customer_id = ? GROUP BY products.product_name ORDER BY quantity DESC LIMIT 3',
             [customerId]
         );
@@ -83,10 +87,11 @@ router.get('/:customerId/favourites', async (req, res, next) => {
 router.get('/:customerId/orders', async (req, res, next) => {
     try {
         const customerId = req.params.customerId;
-        const [results] = await pool.execute<RowDataPacket[]>(
+        const [results] = await executePreparedStatement(
             'SELECT date_ordered, date_paid, product_name, quantity, revenue, profit FROM orders INNER JOIN products ON orders.product_id = products.product_id WHERE orders.customer_id = ?',
             [customerId]
         );
+
         const orders: CustomerOrder[] = results.map((order) => ({
             dateOrdered: order.date_ordered,
             datePaid: order.date_paid,
@@ -106,13 +111,15 @@ router.get('/:customerId/orders', async (req, res, next) => {
 });
 
 router.post('/new', async (req, res, next) => {
-    const { firstName, lastName } = req.body;
+    const { firstName, lastName, email, telephone, password } = req.body;
 
     try {
-        const insertValues: (string | number)[][] = [[firstName, lastName, 0]];
+        const insertValues: (string | number)[][] = [
+            [firstName, lastName, email, telephone, password],
+        ];
 
-        await pool.query(
-            'INSERT INTO customers (first_name, last_name, balance) VALUES ?',
+        await queryWithValues(
+            'INSERT INTO customers (first_name, last_name, email, telephone, password) VALUES ?',
             [insertValues]
         );
 
