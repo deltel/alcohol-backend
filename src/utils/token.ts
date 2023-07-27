@@ -5,8 +5,7 @@ export function signToken(payload: JwtPayload) {
 }
 
 export function verifyToken(token: string) {
-    const decoded = verify(token, process.env.JWT_SECRET!);
-    console.log('decoded', decoded);
+    return verify(token, process.env.JWT_SECRET!);
 }
 
 export function extractToken(authorizationValue: string) {

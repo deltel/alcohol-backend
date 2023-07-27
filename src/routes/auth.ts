@@ -10,7 +10,7 @@ router.post('/login', async (req, res, next) => {
     const { email, password } = req.body;
     try {
         const [results] = await executePreparedStatement(
-            'SELECT customer_id, password FROM `customers` WHERE email = ?',
+            'SELECT user_id, role, password FROM `users` WHERE email = ?',
             [email]
         );
 
@@ -24,7 +24,10 @@ router.post('/login', async (req, res, next) => {
 
         res.send({
             message: 'Successfully logged in',
-            token: signToken({ sub: results[0].customer_id }),
+            token: signToken({
+                sub: results[0].user_id,
+                role: results[0].role,
+            }),
         });
     } catch (e: any) {
         e.customMessage = 'Failed to login customer';
@@ -43,15 +46,15 @@ router.post('/register', async (req, res, next) => {
         ];
 
         await queryWithValues(
-            'INSERT INTO customers (first_name, last_name, email, telephone, password) VALUES ?',
+            'INSERT INTO `users` (first_name, last_name, email, telephone, password) VALUES ?',
             [insertValues]
         );
 
-        console.log('Added new customer');
+        console.log('Added new user');
 
-        res.send({ message: 'Successfully registered customer' });
+        res.send({ message: 'Successfully registered user' });
     } catch (e: any) {
-        e.customMessage = 'Failed to register customer';
+        e.customMessage = 'Failed to register user';
         next(e);
     }
 });

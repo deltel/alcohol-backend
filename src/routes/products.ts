@@ -7,7 +7,7 @@ import {
     queryWithValues,
     query,
 } from '../db/queries';
-import { auth } from '../middleware/auth';
+import { auth, isAdmin } from '../middleware/auth';
 
 const router = express.Router();
 router.use(auth);
@@ -32,7 +32,7 @@ router.get('/', async (_, res, next) => {
     }
 });
 
-router.get('/:productId/orders/recent', async (req, res, next) => {
+router.get('/:productId/orders/recent', isAdmin, async (req, res, next) => {
     try {
         const productId = req.params.productId;
         const [results] = await executePreparedStatement(
@@ -59,7 +59,7 @@ router.get('/:productId/orders/recent', async (req, res, next) => {
     }
 });
 
-router.get('/:productId/orders', async (req, res, next) => {
+router.get('/:productId/orders', isAdmin, async (req, res, next) => {
     try {
         const productId = req.params.productId;
         const [results] = await executePreparedStatement(
@@ -87,7 +87,7 @@ router.get('/:productId/orders', async (req, res, next) => {
     }
 });
 
-router.get('/:productId/admin', async (req, res, next) => {
+router.get('/:productId/admin', isAdmin, async (req, res, next) => {
     try {
         const [results] = await executePreparedStatement(
             'SELECT product_id, product_name, stock_level, unit_cost, selling_price, wholesale_price, total_cost, total_orders, total_profit, total_revenue, total_value, volume FROM `products` WHERE `product_id` = ?',
@@ -141,9 +141,36 @@ router.get('/:productId', async (req, res, next) => {
     }
 });
 
-router.post('/new', async (req, res, next) => {
+router.post('/new', isAdmin, async (req, res, next) => {
+    const {
+        productName,
+        volume,
+        stockLevel,
+        unitCost,
+        sellingPrice,
+        wholesalePrice,
+        totalValue,
+        totalOrders,
+        totalCost,
+        totalRevenue,
+        totalProfit,
+    } = req.body;
     try {
-        const insertValues: (string | number)[][] = [Object.values(req.body)];
+        const insertValues: (string | number)[][] = [
+            [
+                productName,
+                volume,
+                stockLevel,
+                unitCost,
+                sellingPrice,
+                wholesalePrice,
+                totalValue,
+                totalOrders,
+                totalCost,
+                totalRevenue,
+                totalProfit,
+            ],
+        ];
 
         await queryWithValues(
             'INSERT INTO products (product_name, volume, stock_level, unit_cost, selling_price, wholesale_price, total_value, total_orders, total_cost, total_revenue, total_profit) VALUES ?',

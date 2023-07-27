@@ -5,7 +5,7 @@ export enum OrderType {
 
 export interface Order {
     productId: string;
-    customerId: string;
+    userId: string;
     dateOrdered: string;
     purchaseLocation: string;
     datePaid: string | null;
@@ -20,16 +20,11 @@ export interface Order {
 
 export type ProductOrder = Omit<
     Order,
-    'cost' | 'productId' | 'customerId' | 'value'
+    'cost' | 'productId' | 'userId' | 'value'
 >;
 export type CustomerOrder = Omit<
     Order,
-    | 'purchaseLocation'
-    | 'orderType'
-    | 'cost'
-    | 'productId'
-    | 'customerId'
-    | 'value'
+    'purchaseLocation' | 'orderType' | 'cost' | 'productId' | 'userId' | 'value'
 >;
 export type RestockOrder = Omit<
     Order,
@@ -38,7 +33,7 @@ export type RestockOrder = Omit<
     | 'revenue'
     | 'profit'
     | 'productId'
-    | 'customerId'
+    | 'userId'
     | 'value'
 >;
 

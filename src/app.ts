@@ -1,7 +1,7 @@
 import express from 'express';
 
 import productRouter from './routes/products';
-import customerRouter from './routes/customers';
+import userRouter from './routes/users';
 import orderRouter from './routes/orders';
 import authRouter from './routes/auth';
 
@@ -11,7 +11,7 @@ const app = express();
 app.use(express.json());
 
 app.use('/products', productRouter);
-app.use('/customers', customerRouter);
+app.use('/users', userRouter);
 app.use('/orders', orderRouter);
 
 app.use('/', authRouter);
