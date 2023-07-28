@@ -12,9 +12,14 @@ import {
 import { auth, isAdmin } from '../middleware/auth';
 import { hashPassword } from '../utils/password';
 
+import orderRouter from './orders/admin';
+import productRouter from './products/admin';
+
 const router = express.Router();
 
 router.use(auth);
+router.use('/admin/orders', orderRouter);
+router.use('/admin/products', productRouter);
 
 router.get('/', isAdmin, async (_, res, next) => {
     try {
@@ -91,11 +96,12 @@ router.get('/:userId/orders', async (req, res, next) => {
     try {
         const userId = req.params.userId;
         const [results] = await executePreparedStatement(
-            'SELECT date_ordered, date_paid, product_name, quantity, revenue, profit FROM orders INNER JOIN products ON orders.product_id = products.product_id WHERE orders.user_id = ?',
+            'SELECT product_id, date_ordered, date_paid, product_name, quantity, revenue, profit FROM orders INNER JOIN products ON orders.product_id = products.product_id WHERE orders.user_id = ?',
             [userId]
         );
 
         const orders: CustomerOrder[] = results.map((order) => ({
+            productId: order.product_id,
             dateOrdered: order.date_ordered,
             datePaid: order.date_paid,
             productName: order.product_name,

@@ -1,8 +1,8 @@
 import express from 'express';
 
-import productRouter from './routes/products';
+import productRouter from './routes/products/products';
 import userRouter from './routes/users';
-import orderRouter from './routes/orders';
+import orderRouter from './routes/orders/orders';
 import authRouter from './routes/auth';
 
 import errorHandler from './error-handlers/error-handler';

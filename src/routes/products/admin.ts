@@ -1,33 +1,39 @@
 import express from 'express';
 
-import { Product, ProductPreview, CustomerProduct } from '../contracts/product';
-import { ProductOrder, RestockOrder } from '../contracts/order';
-import {
-    executePreparedStatement,
-    queryWithValues,
-    query,
-} from '../db/queries';
-import { auth, isAdmin } from '../middleware/auth';
+import { Product } from '../../contracts/product';
+import { ProductOrder, RestockOrder } from '../../contracts/order';
+import { executePreparedStatement, queryWithValues } from '../../db/queries';
+import { isAdmin } from '../../middleware/auth';
 
 const router = express.Router();
-router.use(auth);
+router.use(isAdmin);
 
-router.get('/', async (_, res, next) => {
+router.get('/:productId', isAdmin, async (req, res, next) => {
     try {
-        const [results] = await query(
-            'SELECT product_id, product_name, stock_level FROM `products`'
+        const [results] = await executePreparedStatement(
+            'SELECT product_id, product_name, stock_level, unit_cost, selling_price, wholesale_price, total_cost, total_orders, total_profit, total_revenue, total_value, volume FROM `products` WHERE `product_id` = ?',
+            [req.params.productId]
         );
 
-        const products: ProductPreview[] = results.map((product) => ({
-            productId: product.product_id,
-            productName: product.product_name,
-            stockLevel: product.stock_level,
-        }));
+        const product: Product = {
+            productId: results[0].product_id,
+            productName: results[0].product_name,
+            stockLevel: results[0].stock_level,
+            unitCost: parseFloat(results[0].unit_cost),
+            sellingPrice: parseFloat(results[0].selling_price),
+            wholesalePrice: parseFloat(results[0].wholesale_price),
+            totalCost: parseFloat(results[0].total_cost),
+            totalOrders: results[0].total_orders,
+            totalProfit: parseFloat(results[0].total_profit),
+            totalRevenue: parseFloat(results[0].total_revenue),
+            totalValue: parseFloat(results[0].total_value),
+            volume: results[0].volume,
+        };
 
-        console.log('Retrieved products');
-        res.send({ products });
+        console.log('Retrieved product for admin');
+        res.send({ product });
     } catch (e: any) {
-        e.customMessage = 'Failed to fetch products';
+        e.customMessage = 'Failed to retrieve product';
         next(e);
     }
 });
@@ -87,61 +93,7 @@ router.get('/:productId/orders', isAdmin, async (req, res, next) => {
     }
 });
 
-router.get('/:productId/admin', isAdmin, async (req, res, next) => {
-    try {
-        const [results] = await executePreparedStatement(
-            'SELECT product_id, product_name, stock_level, unit_cost, selling_price, wholesale_price, total_cost, total_orders, total_profit, total_revenue, total_value, volume FROM `products` WHERE `product_id` = ?',
-            [req.params.productId]
-        );
-
-        const product: Product = {
-            productId: results[0].product_id,
-            productName: results[0].product_name,
-            stockLevel: results[0].stock_level,
-            unitCost: parseFloat(results[0].unit_cost),
-            sellingPrice: parseFloat(results[0].selling_price),
-            wholesalePrice: parseFloat(results[0].wholesale_price),
-            totalCost: parseFloat(results[0].total_cost),
-            totalOrders: results[0].total_orders,
-            totalProfit: parseFloat(results[0].total_profit),
-            totalRevenue: parseFloat(results[0].total_revenue),
-            totalValue: parseFloat(results[0].total_value),
-            volume: results[0].volume,
-        };
-
-        console.log('Retrieved product for admin');
-        res.send({ product });
-    } catch (e: any) {
-        e.customMessage = 'Failed to retrieve product';
-        next(e);
-    }
-});
-
-router.get('/:productId', async (req, res, next) => {
-    try {
-        const [results] = await executePreparedStatement(
-            'SELECT product_id, product_name, stock_level, selling_price, volume FROM `products` WHERE `product_id` = ?',
-            [req.params.productId]
-        );
-
-        const product: CustomerProduct = {
-            productId: results[0].product_id,
-            productName: results[0].product_name,
-            stockLevel: results[0].stock_level,
-            sellingPrice: parseFloat(results[0].selling_price),
-            volume: results[0].volume,
-        };
-
-        console.log('Retrieved product for customer');
-
-        res.send({ product });
-    } catch (e: any) {
-        e.customMessage = 'Failed to retrieve product';
-        next(e);
-    }
-});
-
-router.post('/new', isAdmin, async (req, res, next) => {
+router.post('/new', async (req, res, next) => {
     const {
         productName,
         volume,

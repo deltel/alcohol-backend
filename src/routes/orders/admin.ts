@@ -1,34 +1,17 @@
 import express from 'express';
 
-import { DateOrder, Order, OrderType } from '../contracts/order';
-import { queryWithValues, executePreparedStatement } from '../db/queries';
-import { auth, isAdmin } from '../middleware/auth';
+import {
+    DateOrder,
+    Order,
+    OrderDetails,
+    OrderType,
+    ProductOrder,
+} from '../../contracts/order';
+import { queryWithValues, executePreparedStatement } from '../../db/queries';
+import { isAdmin } from '../../middleware/auth';
 
 const router = express.Router();
-router.use(auth);
-
-router.get('', async (req, res, next) => {
-    try {
-        const date = req.query.date as string;
-        const [results] = await executePreparedStatement(
-            "SELECT CONCAT(first_name, ' ', last_name) AS full_name, GROUP_CONCAT(CONCAT(product_name, ': ', quantity)) AS details, SUM(revenue) AS revenue FROM orders INNER JOIN products ON orders.product_id = products.product_id INNER JOIN `users` ON orders.user_id = users.user_id WHERE orders.date_ordered = ? AND orders.order_type = 'sale' GROUP BY full_name",
-            [date]
-        );
-
-        const orders: DateOrder[] = results.map((order) => ({
-            customerName: order.customer_name,
-            details: order.details,
-            revenue: parseFloat(order.revenue),
-        }));
-
-        console.log(`Retrieved all orders for date ${date}`);
-
-        res.send({ orders });
-    } catch (e: any) {
-        e.customMessage = 'Failed to retrieve orders';
-        next(e);
-    }
-});
+router.use(isAdmin);
 
 router.post('/new', async (req, res, next) => {
     try {
@@ -39,7 +22,7 @@ router.post('/new', async (req, res, next) => {
                 order.dateOrdered,
                 order.purchaseLocation,
                 order.datePaid,
-                order.orderType,
+                OrderType.RESTOCK,
                 order.quantity,
                 order.cost,
                 order.revenue,
@@ -53,45 +36,21 @@ router.post('/new', async (req, res, next) => {
         );
         console.log('Successfully added orders');
 
-        const updateValues =
-            req.body.orders[0].orderType === OrderType.RESTOCK
-                ? req.body.orders.map((order: Order) => [
-                      order.quantity,
-                      order.cost,
-                      order.value,
-                      order.productId,
-                  ])
-                : req.body.orders.map((order: Order) => [
-                      order.quantity,
-                      order.revenue,
-                      order.quantity,
-                      order.productId,
-                  ]);
-
-        const queryString =
-            req.body.orders[0].orderType === OrderType.RESTOCK
-                ? 'UPDATE products SET stock_level = stock_level + ?, total_cost = total_cost + ?, total_value = total_value + ? WHERE product_id = ?'
-                : 'UPDATE products SET stock_level = stock_level - ?, total_value = total_value - ?, total_orders = total_orders + ? WHERE product_id = ?';
+        const updateValues = req.body.orders.map((order: Order) => [
+            order.quantity,
+            order.cost,
+            order.value,
+            order.productId,
+        ]);
 
         updateValues.forEach(async (order: (string | number)[]) => {
-            await queryWithValues(queryString, [...order]);
+            await queryWithValues(
+                'UPDATE products SET stock_level = stock_level + ?, total_cost = total_cost + ?, total_value = total_value + ? WHERE product_id = ?',
+                [...order]
+            );
 
             console.log('Successfully updated product');
         });
-
-        if (req.body.orders[0].orderType === OrderType.SALE) {
-            const customerBalance = req.body.orders.reduce(
-                (accumulator: number, currentValue: Order) =>
-                    accumulator + currentValue.revenue,
-                0
-            );
-
-            await executePreparedStatement(
-                'UPDATE `users` SET balance = balance + ? WHERE user_id = ?',
-                [customerBalance, req.body.orders[0].userId]
-            );
-            console.log('Successfully updated customer balance');
-        }
 
         res.send({ message: 'created new order' });
     } catch (e: any) {
@@ -153,6 +112,34 @@ router.post('/:orderId/pay', isAdmin, async (req, res, next) => {
         res.send({ message: 'payment made' });
     } catch (e: any) {
         e.customMessage = 'Failed to register payment';
+        next(e);
+    }
+});
+
+router.get('/:orderId', async (req, res, next) => {
+    try {
+        const [results] = await executePreparedStatement(
+            'SELECT product_name, CONCAT(first_name, " ", last_name) AS customer_name, date_ordered, purchase_location, date_paid, order_type, quantity, cost, revenue, profit FROM `orders` INNER JOIN products ON orders.product_id = products.product_id INNER JOIN users ON orders.user_id = users.user_id WHERE order_id = ?',
+            [req.params.orderId]
+        );
+
+        const order: OrderDetails = {
+            productName: results[0].product_name,
+            dateOrdered: results[0].date_ordered,
+            datePaid: results[0].date_paid,
+            orderType: results[0].order_type,
+            profit: results[0].profit,
+            purchaseLocation: results[0].purchase_location,
+            quantity: results[0].quantity,
+            revenue: results[0].revenue,
+            customerName: results[0].customer_name,
+        };
+
+        console.log('Retrieved order details');
+
+        res.send({ order });
+    } catch (e: any) {
+        e.customMessage = 'Failed to retrieve order';
         next(e);
     }
 });

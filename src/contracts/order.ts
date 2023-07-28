@@ -18,13 +18,17 @@ export interface Order {
     value: number;
 }
 
+export type OrderDetails = ProductOrder & {
+    customerName: string;
+};
+
 export type ProductOrder = Omit<
     Order,
     'cost' | 'productId' | 'userId' | 'value'
 >;
 export type CustomerOrder = Omit<
     Order,
-    'purchaseLocation' | 'orderType' | 'cost' | 'productId' | 'userId' | 'value'
+    'purchaseLocation' | 'orderType' | 'cost' | 'userId' | 'value'
 >;
 export type RestockOrder = Omit<
     Order,
