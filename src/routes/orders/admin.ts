@@ -1,14 +1,14 @@
 import express from 'express';
 
 import {
-    DateOrder,
     Order,
     OrderDetails,
+    OrderSummary,
     OrderType,
-    ProductOrder,
 } from '../../contracts/order';
 import { queryWithValues, executePreparedStatement } from '../../db/queries';
 import { isAdmin } from '../../middleware/auth';
+import { Intervals } from '../../constants/pagination';
 
 const router = express.Router();
 router.use(isAdmin);
@@ -55,6 +55,29 @@ router.post('/new', async (req, res, next) => {
         res.send({ message: 'created new order' });
     } catch (e: any) {
         e.customMessage = 'Failed to register order';
+        next(e);
+    }
+});
+
+router.get('', async (req, res, next) => {
+    const { pageSize = Intervals[10], pageOffset = Intervals[0] } = req.query;
+    try {
+        const [results] = await executePreparedStatement(
+            'SELECT order_id, user_id, order_type, revenue, date_paid FROM orders ORDER BY order_id LIMIT ? OFFSET ?',
+            [pageSize, pageOffset]
+        );
+
+        const orders: OrderSummary[] = results.map((order) => ({
+            orderId: order.order_id,
+            userId: order.user_id,
+            revenue: order.revenue,
+            datePaid: order.date_paid,
+            orderType: order.order_type,
+        }));
+
+        res.send({ orders });
+    } catch (e: any) {
+        e.customMessage = 'Failed to retrieve orders';
         next(e);
     }
 });

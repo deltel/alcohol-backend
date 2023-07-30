@@ -1,16 +1,19 @@
 import express from 'express';
 
 import { ProductPreview, CustomerProduct } from '../../contracts/product';
-import { executePreparedStatement, query } from '../../db/queries';
+import { executePreparedStatement } from '../../db/queries';
 import { auth } from '../../middleware/auth';
+import { Intervals } from '../../constants/pagination';
 
 const router = express.Router();
 router.use(auth);
 
-router.get('/', async (_, res, next) => {
+router.get('/', async (req, res, next) => {
+    const { pageSize = Intervals[10], pageOffset = Intervals[0] } = req.query;
     try {
-        const [results] = await query(
-            'SELECT product_id, product_name, stock_level FROM `products`'
+        const [results] = await executePreparedStatement(
+            'SELECT product_id, product_name, stock_level FROM `products` LIMIT ? OFFSET ?',
+            [pageSize, pageOffset]
         );
 
         const products: ProductPreview[] = results.map((product) => ({

@@ -18,6 +18,11 @@ export interface Order {
     value: number;
 }
 
+export type OrderSummary = Pick<
+    Order,
+    'userId' | 'revenue' | 'datePaid' | 'orderType'
+> & { orderId: string };
+
 export type OrderDetails = ProductOrder & {
     customerName: string;
 };

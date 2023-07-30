@@ -4,13 +4,10 @@ import { User, UserPreview } from '../contracts/user';
 import { FavouriteProduct } from '../contracts/product';
 import { CustomerOrder } from '../contracts/order';
 
-import {
-    executePreparedStatement,
-    query,
-    queryWithValues,
-} from '../db/queries';
+import { executePreparedStatement, queryWithValues } from '../db/queries';
 import { auth, isAdmin } from '../middleware/auth';
 import { hashPassword } from '../utils/password';
+import { Intervals } from '../constants/pagination';
 
 import orderRouter from './orders/admin';
 import productRouter from './products/admin';
@@ -21,10 +18,12 @@ router.use(auth);
 router.use('/admin/orders', orderRouter);
 router.use('/admin/products', productRouter);
 
-router.get('/', isAdmin, async (_, res, next) => {
+router.get('/', isAdmin, async (req, res, next) => {
+    const { pageSize = Intervals[10], pageOffset = Intervals[0] } = req.query;
     try {
-        const [results] = await query(
-            "SELECT user_id, CONCAT(first_name, ' ', last_name) AS full_name, last_name, balance FROM `users`"
+        const [results] = await executePreparedStatement(
+            "SELECT user_id, CONCAT(first_name, ' ', last_name) AS full_name, last_name, balance FROM `users` ORDER BY user_id LIMIT ? OFFSET ?",
+            [pageSize, pageOffset]
         );
 
         const users: UserPreview[] = results.map((user) => ({
@@ -93,11 +92,12 @@ router.get('/:userId/favourites', async (req, res, next) => {
 });
 
 router.get('/:userId/orders', async (req, res, next) => {
+    const { pageSize = Intervals[10], pageOffset = Intervals[0] } = req.query;
     try {
         const userId = req.params.userId;
         const [results] = await executePreparedStatement(
-            'SELECT product_id, date_ordered, date_paid, product_name, quantity, revenue, profit FROM orders INNER JOIN products ON orders.product_id = products.product_id WHERE orders.user_id = ?',
-            [userId]
+            'SELECT orders.product_id, date_ordered, date_paid, product_name, quantity, revenue, profit FROM orders INNER JOIN products ON orders.product_id = products.product_id WHERE orders.user_id = ? ORDER BY date_ordered LIMIT ? OFFSET ?',
+            [userId, pageSize, pageOffset]
         );
 
         const orders: CustomerOrder[] = results.map((order) => ({

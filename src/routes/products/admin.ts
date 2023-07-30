@@ -4,6 +4,7 @@ import { Product } from '../../contracts/product';
 import { ProductOrder, RestockOrder } from '../../contracts/order';
 import { executePreparedStatement, queryWithValues } from '../../db/queries';
 import { isAdmin } from '../../middleware/auth';
+import { Intervals } from '../../constants/pagination';
 
 const router = express.Router();
 router.use(isAdmin);
@@ -66,11 +67,12 @@ router.get('/:productId/orders/recent', isAdmin, async (req, res, next) => {
 });
 
 router.get('/:productId/orders', isAdmin, async (req, res, next) => {
+    const { pageSize = Intervals[10], pageOffset = Intervals[0] } = req.query;
     try {
         const productId = req.params.productId;
         const [results] = await executePreparedStatement(
-            'SELECT date_ordered, date_paid, product_name, order_type, purchase_location, quantity, revenue, profit FROM orders INNER JOIN products ON orders.product_id = products.product_id WHERE orders.product_id = ?',
-            [productId]
+            'SELECT date_ordered, date_paid, product_name, order_type, purchase_location, quantity, revenue, profit FROM orders INNER JOIN products ON orders.product_id = products.product_id WHERE orders.product_id = ? ORDER BY date_ordered LIMIT ? OFFSET ?',
+            [productId, pageSize, pageOffset]
         );
 
         const orders: ProductOrder[] = results.map((order) => ({
