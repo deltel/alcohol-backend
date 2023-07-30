@@ -83,7 +83,7 @@ router.post('/new', getUserId, async (req, res, next) => {
         );
         console.log('Successfully updated customer balance');
 
-        res.send({ message: 'created new order' });
+        res.status(201).send({ message: 'created new order' });
     } catch (e: any) {
         e.customMessage = 'Failed to register order';
         next(e);

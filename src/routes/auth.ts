@@ -52,7 +52,7 @@ router.post('/register', async (req, res, next) => {
 
         console.log('Added new user');
 
-        res.send({ message: 'Successfully registered user' });
+        res.status(201).send({ message: 'Successfully registered user' });
     } catch (e: any) {
         e.customMessage = 'Failed to register user';
         next(e);

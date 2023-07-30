@@ -5,7 +5,7 @@ import userRouter from './routes/users';
 import orderRouter from './routes/orders/orders';
 import authRouter from './routes/auth';
 
-import errorHandler from './error-handlers/error-handler';
+import { errorHandler, pageNotFound } from './error-handlers/error-handler';
 
 const app = express();
 app.use(express.json());
@@ -15,6 +15,8 @@ app.use('/v1/users', userRouter);
 app.use('/v1/orders', orderRouter);
 
 app.use('/', authRouter);
+
+app.use('', pageNotFound);
 
 app.use(errorHandler);
 

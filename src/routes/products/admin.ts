@@ -133,7 +133,7 @@ router.post('/new', async (req, res, next) => {
 
         console.log('Added new product');
 
-        res.send({ message: 'Successfully added new product' });
+        res.status(201).send({ message: 'Successfully added new product' });
     } catch (e: any) {
         e.customMessage = 'Failed to add product';
         next(e);
