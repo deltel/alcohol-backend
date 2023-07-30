@@ -10,9 +10,9 @@ import errorHandler from './error-handlers/error-handler';
 const app = express();
 app.use(express.json());
 
-app.use('/products', productRouter);
-app.use('/users', userRouter);
-app.use('/orders', orderRouter);
+app.use('/v1/products', productRouter);
+app.use('/v1/users', userRouter);
+app.use('/v1/orders', orderRouter);
 
 app.use('/', authRouter);
 
