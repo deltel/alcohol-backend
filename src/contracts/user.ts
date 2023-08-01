@@ -16,3 +16,15 @@ export interface User {
 }
 
 export type UserPreview = Pick<User, 'userId' | 'fullName' | 'balance'>;
+
+export interface Registration {
+    firstName: string;
+    lastName: string;
+    email: string;
+    telephone: string;
+    password: string;
+}
+
+export type UserRequest = Registration & { role: UserRole };
+
+export type Login = Pick<Registration, 'email' | 'password'>;

@@ -11,6 +11,7 @@ import { Intervals } from '../constants/pagination';
 
 import orderRouter from './orders/admin';
 import productRouter from './products/admin';
+import InternalServerError from '../errors/InternalServerError';
 
 const router = express.Router();
 
@@ -36,8 +37,7 @@ router.get('/', isAdmin, async (req, res, next) => {
 
         res.send({ users });
     } catch (e: any) {
-        e.customMessage = 'Failed to retrieve users';
-        next(e);
+        next(new InternalServerError('Failed to retrieve users', undefined, e));
     }
 });
 
@@ -64,8 +64,9 @@ router.get('/:userId', async (req, res, next) => {
 
         res.send({ customer });
     } catch (e: any) {
-        e.customMessage = 'Failed to retrieve customer';
-        next(e);
+        next(
+            new InternalServerError('Failed to retrieve customer', undefined, e)
+        );
     }
 });
 
@@ -86,8 +87,7 @@ router.get('/:userId/favourites', async (req, res, next) => {
 
         res.send({ favourites });
     } catch (e: any) {
-        e.customMessage = 'Failed to retrieve favourites';
-        next(e);
+        next(new InternalServerError('Failed to retrieve favourites', e));
     }
 });
 
@@ -114,8 +114,9 @@ router.get('/:userId/orders', async (req, res, next) => {
 
         res.send({ orders });
     } catch (e: any) {
-        e.customMessage = 'Failed to retrieve orders';
-        next(e);
+        next(
+            new InternalServerError('Failed to retrieve orders', undefined, e)
+        );
     }
 });
 
@@ -138,8 +139,7 @@ router.post('/new', isAdmin, async (req, res, next) => {
 
         res.send({ message: 'Successfully created user' });
     } catch (e: any) {
-        e.customMessage = 'Failed to create user';
-        next(e);
+        next(new InternalServerError('Failed to create user', undefined, e));
     }
 });
 

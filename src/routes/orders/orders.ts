@@ -1,13 +1,14 @@
 import express from 'express';
 
 import {
-    CustomerOrder,
+    CustomerOrderRequest,
     DateOrder,
     Order,
     OrderType,
 } from '../../contracts/order';
 import { queryWithValues, executePreparedStatement } from '../../db/queries';
 import { auth, getUserId } from '../../middleware/auth';
+import InternalServerError from '../../errors/InternalServerError';
 
 const router = express.Router();
 router.use(auth);
@@ -30,15 +31,16 @@ router.get('', async (req, res, next) => {
 
         res.send({ orders });
     } catch (e: any) {
-        e.customMessage = 'Failed to retrieve orders';
-        next(e);
+        next(
+            new InternalServerError('Failed to retrieve orders', undefined, e)
+        );
     }
 });
 
 router.post('/new', getUserId, async (req, res, next) => {
     try {
         const insertValues: (string | number)[][] = req.body.orders.map(
-            (order: CustomerOrder) => [
+            (order: CustomerOrderRequest) => [
                 order.productId,
                 req.body.userId,
                 order.dateOrdered,
@@ -85,8 +87,7 @@ router.post('/new', getUserId, async (req, res, next) => {
 
         res.status(201).send({ message: 'created new order' });
     } catch (e: any) {
-        e.customMessage = 'Failed to register order';
-        next(e);
+        next(new InternalServerError('Failed to register order', undefined, e));
     }
 });
 

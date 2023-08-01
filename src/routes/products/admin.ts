@@ -5,6 +5,7 @@ import { ProductOrder, RestockOrder } from '../../contracts/order';
 import { executePreparedStatement, queryWithValues } from '../../db/queries';
 import { isAdmin } from '../../middleware/auth';
 import { Intervals } from '../../constants/pagination';
+import InternalServerError from '../../errors/InternalServerError';
 
 const router = express.Router();
 router.use(isAdmin);
@@ -34,8 +35,9 @@ router.get('/:productId', isAdmin, async (req, res, next) => {
         console.log('Retrieved product for admin');
         res.send({ product });
     } catch (e: any) {
-        e.customMessage = 'Failed to retrieve product';
-        next(e);
+        next(
+            new InternalServerError('Failed to retrieve product', undefined, e)
+        );
     }
 });
 
@@ -61,8 +63,9 @@ router.get('/:productId/orders/recent', isAdmin, async (req, res, next) => {
 
         res.send({ orders });
     } catch (e: any) {
-        e.customMessage = 'Failed to get recent orders';
-        next(e);
+        next(
+            new InternalServerError('Failed to get recent orders', undefined, e)
+        );
     }
 });
 
@@ -90,8 +93,9 @@ router.get('/:productId/orders', isAdmin, async (req, res, next) => {
 
         res.send({ orders });
     } catch (e: any) {
-        e.customMessage = 'Failed to retrieve orders';
-        next(e);
+        next(
+            new InternalServerError('Failed to retrieve orders', undefined, e)
+        );
     }
 });
 
@@ -135,8 +139,7 @@ router.post('/new', async (req, res, next) => {
 
         res.status(201).send({ message: 'Successfully added new product' });
     } catch (e: any) {
-        e.customMessage = 'Failed to add product';
-        next(e);
+        next(new InternalServerError('Failed to add product', undefined, e));
     }
 });
 

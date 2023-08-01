@@ -23,4 +23,6 @@ export type ProductPreview = Pick<
     'productId' | 'productName' | 'stockLevel'
 >;
 
+export type ProductRequest = Omit<Product, 'productId'>;
+
 export type FavouriteProduct = Pick<Product, 'productName' | 'totalRevenue'>;

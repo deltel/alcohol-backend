@@ -9,6 +9,7 @@ import {
 import { queryWithValues, executePreparedStatement } from '../../db/queries';
 import { isAdmin } from '../../middleware/auth';
 import { Intervals } from '../../constants/pagination';
+import InternalServerError from '../../errors/InternalServerError';
 
 const router = express.Router();
 router.use(isAdmin);
@@ -54,8 +55,7 @@ router.post('/new', async (req, res, next) => {
 
         res.status(201).send({ message: 'created new order' });
     } catch (e: any) {
-        e.customMessage = 'Failed to register order';
-        next(e);
+        next(new InternalServerError('Failed to register order', e));
     }
 });
 
@@ -77,8 +77,7 @@ router.get('', async (req, res, next) => {
 
         res.send({ orders });
     } catch (e: any) {
-        e.customMessage = 'Failed to retrieve orders';
-        next(e);
+        next(new InternalServerError('Failed to retrieve orders', e));
     }
 });
 
@@ -134,8 +133,7 @@ router.post('/:orderId/pay', isAdmin, async (req, res, next) => {
 
         res.send({ message: 'payment made' });
     } catch (e: any) {
-        e.customMessage = 'Failed to register payment';
-        next(e);
+        next(new InternalServerError('Failed to register payment', e));
     }
 });
 
@@ -162,8 +160,7 @@ router.get('/:orderId', async (req, res, next) => {
 
         res.send({ order });
     } catch (e: any) {
-        e.customMessage = 'Failed to retrieve order';
-        next(e);
+        next(new InternalServerError('Failed to retrieve order', e));
     }
 });
 

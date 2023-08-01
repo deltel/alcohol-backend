@@ -4,6 +4,7 @@ import { ProductPreview, CustomerProduct } from '../../contracts/product';
 import { executePreparedStatement } from '../../db/queries';
 import { auth } from '../../middleware/auth';
 import { Intervals } from '../../constants/pagination';
+import InternalServerError from '../../errors/InternalServerError';
 
 const router = express.Router();
 router.use(auth);
@@ -25,8 +26,7 @@ router.get('/', async (req, res, next) => {
         console.log('Retrieved products');
         res.send({ products });
     } catch (e: any) {
-        e.customMessage = 'Failed to fetch products';
-        next(e);
+        next(new InternalServerError('Failed to fetch products', undefined, e));
     }
 });
 
@@ -49,8 +49,9 @@ router.get('/:productId', async (req, res, next) => {
 
         res.send({ product });
     } catch (e: any) {
-        e.customMessage = 'Failed to retrieve product';
-        next(e);
+        next(
+            new InternalServerError('Failed to retrieve product', undefined, e)
+        );
     }
 });
 

@@ -3,6 +3,8 @@ import express from 'express';
 import { executePreparedStatement, queryWithValues } from '../db/queries';
 import { comparePassword, hashPassword } from '../utils/password';
 import { signToken } from '../utils/token';
+import InternalServerError from '../errors/InternalServerError';
+import { isEmpty } from '../validation/validators';
 
 const router = express.Router();
 
@@ -14,11 +16,16 @@ router.post('/login', async (req, res, next) => {
             [email]
         );
 
+        if (isEmpty(results)) {
+            res.status(400).send({ message: 'Invalid email or password' });
+            return;
+        }
+
         const hashedPassword = results[0].password;
         const passwordMatches = await comparePassword(password, hashedPassword);
 
         if (!passwordMatches) {
-            res.status(401).send({ message: 'Invalid email or password' });
+            res.status(400).send({ message: 'Invalid email or password' });
             return;
         }
 
@@ -30,8 +37,7 @@ router.post('/login', async (req, res, next) => {
             }),
         });
     } catch (e: any) {
-        e.customMessage = 'Failed to login customer';
-        next(e);
+        next(new InternalServerError('Failed to login customer', undefined, e));
     }
 });
 
@@ -54,8 +60,7 @@ router.post('/register', async (req, res, next) => {
 
         res.status(201).send({ message: 'Successfully registered user' });
     } catch (e: any) {
-        e.customMessage = 'Failed to register user';
-        next(e);
+        next(new InternalServerError('Failed to register user', undefined, e));
     }
 });
 

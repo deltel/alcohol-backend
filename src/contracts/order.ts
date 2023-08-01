@@ -35,6 +35,11 @@ export type CustomerOrder = Omit<
     Order,
     'purchaseLocation' | 'orderType' | 'cost' | 'userId' | 'value'
 >;
+export type CustomerOrderRequest = Omit<
+    CustomerOrder,
+    'datePaid' | 'productName' | 'profit'
+>;
+export type AdminOrder = Omit<Order, 'productName'>;
 export type RestockOrder = Omit<
     Order,
     | 'datePaid'
