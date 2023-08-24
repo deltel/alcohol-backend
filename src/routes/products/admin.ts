@@ -51,17 +51,17 @@ router.get('/:productId/orders/recent', isAdmin, async (req, res, next) => {
 
         const orders: RestockOrder[] = results.map((order) => ({
             dateOrdered: order.date_ordered,
-            productName: order.product_name,
             purchaseLocation: order.purchase_location,
             quantity: order.quantity,
             cost: parseFloat(order.cost),
         }));
+        const productName = results[0].product_name;
 
         console.log(
             `Retrieved most recent restocking orders for product id ${productId}`
         );
 
-        res.send({ orders });
+        res.send({ productName, orders });
     } catch (e: any) {
         next(
             new InternalServerError('Failed to get recent orders', undefined, e)

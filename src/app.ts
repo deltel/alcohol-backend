@@ -1,4 +1,7 @@
 import express from 'express';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import helmet from 'helmet';
 
 import productRouter from './routes/products/products';
 import userRouter from './routes/users';
@@ -10,6 +13,16 @@ import { validation } from './middleware/validation';
 
 const app = express();
 app.use(express.json());
+app.use(cookieParser());
+app.use(
+    cors({
+        exposedHeaders: ['X-CSRF-Token'],
+        methods: ['GET', 'POST'],
+        origin: 'http://localhost:3000',
+        credentials: true,
+    })
+);
+app.use(helmet());
 
 app.use(validation);
 
@@ -22,5 +35,7 @@ app.use('/v1', authRouter);
 app.use('', pageNotFound);
 
 app.use(errorHandler);
+
+app.disable('x-powered-by');
 
 export default app;

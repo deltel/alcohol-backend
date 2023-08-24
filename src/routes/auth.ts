@@ -1,4 +1,5 @@
 import express from 'express';
+import { v4 as uuidv4 } from 'uuid';
 
 import { executePreparedStatement, queryWithValues } from '../db/queries';
 import { comparePassword, hashPassword } from '../utils/password';
@@ -9,6 +10,7 @@ import { isEmpty } from '../validation/validators';
 const router = express.Router();
 
 router.post('/login', async (req, res, next) => {
+    console.log('logging in');
     const { email, password } = req.body;
     try {
         const [results] = await executePreparedStatement(
@@ -29,14 +31,27 @@ router.post('/login', async (req, res, next) => {
             return;
         }
 
+        console.log('successfully logged in');
+
+        const csrfToken = uuidv4();
+
+        const jwt = signToken({
+            sub: results[0].user_id,
+            role: results[0].role,
+            csrfToken,
+        });
+
+        res.setHeader(
+            'Set-Cookie',
+            `jwt=${jwt}; Max-Age=7200; Domain=localhost; SameSite=None; Secure; HttpOnly`
+        );
+        res.setHeader('X-CSRF-Token', csrfToken);
+
         res.send({
             message: 'Successfully logged in',
-            token: signToken({
-                sub: results[0].user_id,
-                role: results[0].role,
-            }),
         });
     } catch (e: any) {
+        console.log('failed to log in');
         next(new InternalServerError('Failed to login customer', undefined, e));
     }
 });

@@ -6,7 +6,11 @@ export function validEmail(email: string) {
     return validator.isEmail(email);
 }
 
-export function isEmpty(obj: string | {} | []) {
+export function isEmpty(obj?: string | {} | []) {
+    if (obj === undefined) {
+        return true;
+    }
+
     if (typeof obj === 'string') {
         return validator.isEmpty(obj, { ignore_whitespace: true });
     } else if (Array.isArray(obj)) {

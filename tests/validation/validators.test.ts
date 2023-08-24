@@ -156,8 +156,10 @@ describe('validators', () => {
     describe('Object', () => {
         test('is empty', () => {
             const empty = isEmpty({});
+            const empty1 = isEmpty(undefined);
 
             expect(empty).toBe(true);
+            expect(empty1).toBe(true);
         });
 
         test('is not empty', () => {

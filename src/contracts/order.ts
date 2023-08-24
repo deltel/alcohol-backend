@@ -49,6 +49,7 @@ export type RestockOrder = Omit<
     | 'productId'
     | 'userId'
     | 'value'
+    | 'productName'
 >;
 
 export interface DateOrder {
