@@ -32,6 +32,10 @@ app.use('/v1/orders', orderRouter);
 
 app.use('/v1', authRouter);
 
+app.get('/', (_, res) => {
+    res.send('Hello World!');
+});
+
 app.use('', pageNotFound);
 
 app.use(errorHandler);
