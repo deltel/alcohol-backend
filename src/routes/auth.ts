@@ -43,7 +43,7 @@ router.post('/login', async (req, res, next) => {
 
         res.setHeader(
             'Set-Cookie',
-            `jwt=${jwt}; Max-Age=7200; Domain=localhost; SameSite=None; Secure; HttpOnly`
+            `jwt=${jwt}; Max-Age=7200; Secure; HttpOnly`
         );
         res.setHeader('X-CSRF-Token', csrfToken);
 
