@@ -1,6 +1,10 @@
 import express from 'express';
 
-import { Product } from '../../contracts/product';
+import {
+    Product,
+    ProductRequest,
+    ProductRequestColumnMapping,
+} from '../../contracts/product';
 import { ProductOrder, RestockOrder } from '../../contracts/order';
 import { executePreparedStatement, queryWithValues } from '../../db/queries';
 import { isAdmin } from '../../middleware/auth';
@@ -140,6 +144,33 @@ router.post('/new', async (req, res, next) => {
         res.status(201).send({ message: 'Successfully added new product' });
     } catch (e: any) {
         next(new InternalServerError('Failed to add product', undefined, e));
+    }
+});
+
+router.patch('/:productId', isAdmin, async (req, res, next) => {
+    const productId = req.params.productId;
+    try {
+        console.log('Updating product with id', productId);
+        const fields = Object.keys(req.body);
+
+        const columnNames = fields.map(
+            (field) =>
+                ProductRequestColumnMapping[field as keyof ProductRequest]
+        );
+
+        const columns = columnNames.join(' = ?, ');
+        const updateValues = Object.values(req.body);
+
+        await executePreparedStatement(
+            `UPDATE products SET ${columns} = ? WHERE product_id = ${productId}`,
+            updateValues
+        );
+
+        console.log('Successfully updated product with id', productId);
+        res.status(200).send({ message: 'Successfully updated product' });
+    } catch (e: any) {
+        console.log('Failed to update product with id', productId);
+        next(new InternalServerError('Failed to modify product', undefined, e));
     }
 });
 

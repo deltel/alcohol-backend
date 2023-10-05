@@ -26,3 +26,17 @@ export type ProductPreview = Pick<
 export type ProductRequest = Omit<Product, 'productId'>;
 
 export type FavouriteProduct = Pick<Product, 'productName' | 'totalRevenue'>;
+
+export enum ProductRequestColumnMapping {
+    'productName' = 'product_name',
+    'stockLevel' = 'stock_level',
+    'unitCost' = 'unit_cost',
+    'sellingPrice' = 'selling_price',
+    'wholesalePrice' = 'wholesale_price',
+    'totalValue' = 'total_value',
+    'totalOrders' = 'total_orders',
+    'totalCost' = 'total_cost',
+    'totalRevenue' = 'total_revenue',
+    'totalProfit' = 'total_profit',
+    'volume' = 'volume',
+}

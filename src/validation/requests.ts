@@ -77,7 +77,6 @@ export function validateUser(requestBody: UserRequest) {
 
 export function validateLogin(requestBody: Login) {
     const errors: any = {};
-    console.log('request body', requestBody);
     if (isEmpty(requestBody.email) || !validEmail(requestBody.email)) {
         errors.email = Messages.LOGIN;
     } else if (isEmpty(requestBody.password)) {
