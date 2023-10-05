@@ -83,6 +83,6 @@ export function validGenericName(name: string) {
     return (
         !isEmpty(name) &&
         isAlphaNumeric(name) &&
-        validLength(name, { min: 1, max: 20 })
+        validLength(name, { min: 1, max: 50 })
     );
 }
