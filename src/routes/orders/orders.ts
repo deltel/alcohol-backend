@@ -81,7 +81,7 @@ router.post('/new', getUserId, async (req, res, next) => {
 
         await executePreparedStatement(
             'UPDATE `users` SET balance = balance + ? WHERE user_id = ?',
-            [customerBalance, req.body.orders[0].userId]
+            [customerBalance, req.body.userId]
         );
         console.log('Successfully updated customer balance');
 
