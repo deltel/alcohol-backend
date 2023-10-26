@@ -160,8 +160,8 @@ export function validateAdminOrder(requestBody: { orders: AdminOrder[] }) {
         if (!validOrderType(order.orderType)) {
             errors.orderType = 'Invalid order type';
         }
-        if (!isAlphaNumeric(order.purchaseLocation)) {
-            errors.purchaseLocation = Messages.NAME;
+        if (!validGenericName(order.purchaseLocation)) {
+            errors.purchaseLocation = Messages.BUSSINESS_NAME;
         }
         if (!isPositive(order.quantity)) {
             errors.quantity = 'Quantity must be positive';
