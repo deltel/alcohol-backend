@@ -60,7 +60,10 @@ router.post('/new', async (req, res, next) => {
 });
 
 router.get('', async (req, res, next) => {
-    const { pageSize = Intervals[10], pageOffset = Intervals[0] } = req.query;
+    let { pageSize, pageOffset } = req.query;
+    pageSize = Intervals[pageSize as string] ?? Intervals['10'];
+    pageOffset = Intervals[pageOffset as string] ?? Intervals['0'];
+
     try {
         const [results] = await executePreparedStatement(
             'SELECT order_id, user_id, order_type, revenue, date_paid FROM orders ORDER BY order_id LIMIT ? OFFSET ?',

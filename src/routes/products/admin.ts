@@ -74,7 +74,10 @@ router.get('/:productId/orders/recent', isAdmin, async (req, res, next) => {
 });
 
 router.get('/:productId/orders', isAdmin, async (req, res, next) => {
-    const { pageSize = Intervals[10], pageOffset = Intervals[0] } = req.query;
+    let { pageSize, pageOffset } = req.query;
+    pageSize = Intervals[pageSize as string] ?? Intervals['10'];
+    pageOffset = Intervals[pageOffset as string] ?? Intervals['0'];
+
     try {
         const productId = req.params.productId;
         const [results] = await executePreparedStatement(

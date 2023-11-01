@@ -20,7 +20,10 @@ router.use('/admin/orders', orderRouter);
 router.use('/admin/products', productRouter);
 
 router.get('/', isAdmin, async (req, res, next) => {
-    const { pageSize = Intervals[10], pageOffset = Intervals[0] } = req.query;
+    let { pageSize, pageOffset } = req.query;
+    pageSize = Intervals[pageSize as string] ?? Intervals['10'];
+    pageOffset = Intervals[pageOffset as string] ?? Intervals['0'];
+
     try {
         const [results] = await executePreparedStatement(
             "SELECT user_id, CONCAT(first_name, ' ', last_name) AS full_name, last_name, balance FROM `users` ORDER BY user_id LIMIT ? OFFSET ?",
@@ -92,7 +95,10 @@ router.get('/:userId/favourites', async (req, res, next) => {
 });
 
 router.get('/:userId/orders', async (req, res, next) => {
-    const { pageSize = Intervals[10], pageOffset = Intervals[0] } = req.query;
+    let { pageSize, pageOffset } = req.query;
+    pageSize = Intervals[pageSize as string] ?? Intervals['10'];
+    pageOffset = Intervals[pageOffset as string] ?? Intervals['0'];
+
     try {
         const userId = req.params.userId;
         const [results] = await executePreparedStatement(
