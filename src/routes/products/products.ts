@@ -16,7 +16,7 @@ router.get('/', async (req, res, next) => {
 
     try {
         const [results] = await executePreparedStatement(
-            'SELECT product_id, product_name, stock_level FROM `products` LIMIT ? OFFSET ?',
+            'SELECT product_id, product_name, stock_level FROM `products` ORDER BY stock_level DESC LIMIT ? OFFSET ?',
             [pageSize, pageOffset]
         );
 
