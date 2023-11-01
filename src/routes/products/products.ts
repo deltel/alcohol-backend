@@ -1,7 +1,7 @@
 import express from 'express';
 
 import { ProductPreview, CustomerProduct } from '../../contracts/product';
-import { executePreparedStatement } from '../../db/queries';
+import { executePreparedStatement, query } from '../../db/queries';
 import { auth } from '../../middleware/auth';
 import { Intervals } from '../../constants/pagination';
 import InternalServerError from '../../errors/InternalServerError';
@@ -30,6 +30,26 @@ router.get('/', async (req, res, next) => {
         res.send({ products });
     } catch (e: any) {
         next(new InternalServerError('Failed to fetch products', undefined, e));
+    }
+});
+
+router.get('/total', async (_, res, next) => {
+    try {
+        const [results] = await query(
+            'SELECT COUNT(*) AS total FROM `products`'
+        );
+
+        console.log('Retrieved total products');
+
+        res.send({ total: results[0].total });
+    } catch (e: any) {
+        next(
+            new InternalServerError(
+                'Failed to fetch the total number of products',
+                undefined,
+                e
+            )
+        );
     }
 });
 
