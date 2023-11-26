@@ -16,14 +16,15 @@ router.get('/', async (req, res, next) => {
 
     try {
         const [results] = await executePreparedStatement(
-            'SELECT product_id, product_name, stock_level FROM `products` ORDER BY stock_level DESC LIMIT ? OFFSET ?',
+            'SELECT product_id, product_name, stock_level, selling_price FROM `products` ORDER BY stock_level DESC LIMIT ? OFFSET ?',
             [pageSize, pageOffset]
         );
 
         const products: ProductPreview[] = results.map((product) => ({
-            productId: product.product_id,
+            productId: `${product.product_id}`,
             productName: product.product_name,
             stockLevel: product.stock_level,
+            sellingPrice: product.selling_price,
         }));
 
         console.log('Retrieved products');

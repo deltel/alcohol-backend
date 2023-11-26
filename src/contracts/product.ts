@@ -20,7 +20,7 @@ export type CustomerProduct = Pick<
 
 export type ProductPreview = Pick<
     Product,
-    'productId' | 'productName' | 'stockLevel'
+    'productId' | 'productName' | 'stockLevel' | 'sellingPrice'
 >;
 
 export type ProductRequest = Omit<Product, 'productId'>;
