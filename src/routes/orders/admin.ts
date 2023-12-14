@@ -7,19 +7,20 @@ import {
     OrderType,
 } from '../../contracts/order';
 import { queryWithValues, executePreparedStatement } from '../../db/queries';
-import { isAdmin } from '../../middleware/auth';
+import { getUserId, isAdmin } from '../../middleware/auth';
 import { Intervals } from '../../constants/pagination';
 import InternalServerError from '../../errors/InternalServerError';
 
 const router = express.Router();
 router.use(isAdmin);
 
-router.post('/new', async (req, res, next) => {
+router.post('/new', getUserId, async (req, res, next) => {
+    const userId = req.body.userId;
     try {
         const insertValues: (string | number)[][] = req.body.orders.map(
             (order: Order) => [
                 order.productId,
-                order.userId,
+                userId,
                 order.dateOrdered,
                 order.purchaseLocation,
                 order.datePaid,
