@@ -142,11 +142,7 @@ export function validateAdminOrder(requestBody: { orders: AdminOrder[] }) {
         );
 
     for (const order of requestBody.orders) {
-        if (
-            Object.keys(order).length !== 11 ||
-            isEmpty(order.productId) ||
-            isEmpty(order.userId)
-        ) {
+        if (Object.keys(order).length !== 10 || isEmpty(order.productId)) {
             errors.properties = 'Incorrect details provided for order(s)';
         }
         if (!validDate(order.dateOrdered)) {
