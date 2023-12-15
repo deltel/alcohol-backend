@@ -60,6 +60,31 @@ router.post('/new', getUserId, async (req, res, next) => {
     }
 });
 
+router.get('/unpaid', async (req, res, next) => {
+    let { pageSize, pageOffset } = req.query;
+    pageSize = Intervals[pageSize as string] ?? Intervals['10'];
+    pageOffset = Intervals[pageOffset as string] ?? Intervals['0'];
+
+    try {
+        const [results] = await executePreparedStatement(
+            "SELECT order_id, user_id, order_type, revenue, date_paid FROM orders WHERE date_paid IS NULL AND order_type = 'sale' ORDER BY order_id LIMIT ? OFFSET ?",
+            [pageSize, pageOffset]
+        );
+
+        const orders: OrderSummary[] = results.map((order) => ({
+            orderId: order.order_id,
+            userId: order.user_id,
+            revenue: order.revenue,
+            datePaid: order.date_paid,
+            orderType: order.order_type,
+        }));
+
+        res.send({ orders });
+    } catch (e: any) {
+        next(new InternalServerError('Failed to retrieve orders', e));
+    }
+});
+
 router.get('', async (req, res, next) => {
     let { pageSize, pageOffset } = req.query;
     pageSize = Intervals[pageSize as string] ?? Intervals['10'];
