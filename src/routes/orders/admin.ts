@@ -7,6 +7,8 @@ import {
     OrderType,
 } from '../../contracts/order';
 import { queryWithValues, executePreparedStatement } from '../../db/queries';
+import pool from '../../db/pool';
+
 import { getUserId, isAdmin } from '../../middleware/auth';
 import { Intervals } from '../../constants/pagination';
 import InternalServerError from '../../errors/InternalServerError';
@@ -16,7 +18,13 @@ router.use(isAdmin);
 
 router.post('/new', getUserId, async (req, res, next) => {
     const userId = req.body.userId;
+    const connection = await pool.getConnection();
+
     try {
+        console.log('Starting order transaction');
+        await connection.beginTransaction();
+        console.log('Successfully started order transaction');
+
         const insertValues: (string | number)[][] = req.body.orders.map(
             (order: Order) => [
                 order.productId,
@@ -34,7 +42,8 @@ router.post('/new', getUserId, async (req, res, next) => {
 
         await queryWithValues(
             'INSERT INTO orders (product_id, user_id, date_ordered, purchase_location, date_paid, order_type, quantity, cost, revenue, profit) VALUES ?',
-            [insertValues]
+            [insertValues],
+            connection
         );
         console.log('Successfully added orders');
 
@@ -45,56 +54,60 @@ router.post('/new', getUserId, async (req, res, next) => {
             order.productId,
         ]);
 
-        updateValues.forEach(async (order: (string | number)[]) => {
-            await queryWithValues(
-                'UPDATE products SET stock_level = stock_level + ?, total_cost = total_cost + ?, total_value = total_value + ? WHERE product_id = ?',
-                [...order]
-            );
+        await Promise.all(
+            updateValues.map((order: (string | number)[]) =>
+                queryWithValues(
+                    'UPDATE products SET stock_level = stock_level + ?, total_cost = total_cost + ?, total_value = total_value + ? WHERE product_id = ?',
+                    [...order],
+                    connection
+                )
+            )
+        );
+        console.log('Successfully updated all products');
 
-            console.log('Successfully updated product');
-        });
+        await connection.commit();
+        console.log('Transaction successful');
 
         res.status(201).send({ message: 'created new order' });
     } catch (e: any) {
+        console.log(
+            'Failed to complete order transaction ... rolling back changes'
+        );
+
+        await connection.rollback();
+        console.log('Changes rolled back');
+
         next(new InternalServerError('Failed to register order', e));
     }
 });
 
-router.get('/unpaid', async (req, res, next) => {
-    let { pageSize, pageOffset } = req.query;
-    pageSize = Intervals[pageSize as string] ?? Intervals['10'];
-    pageOffset = Intervals[pageOffset as string] ?? Intervals['0'];
-
-    try {
-        const [results] = await executePreparedStatement(
-            "SELECT order_id, user_id, order_type, revenue, date_paid FROM orders WHERE date_paid IS NULL AND order_type = 'sale' ORDER BY order_id LIMIT ? OFFSET ?",
-            [pageSize, pageOffset]
-        );
-
-        const orders: OrderSummary[] = results.map((order) => ({
-            orderId: order.order_id,
-            userId: order.user_id,
-            revenue: order.revenue,
-            datePaid: order.date_paid,
-            orderType: order.order_type,
-        }));
-
-        res.send({ orders });
-    } catch (e: any) {
-        next(new InternalServerError('Failed to retrieve orders', e));
-    }
-});
-
 router.get('', async (req, res, next) => {
-    let { pageSize, pageOffset } = req.query;
+    let { pageSize, pageOffset, paymentStatus } = req.query;
     pageSize = Intervals[pageSize as string] ?? Intervals['10'];
     pageOffset = Intervals[pageOffset as string] ?? Intervals['0'];
 
     try {
-        const [results] = await executePreparedStatement(
-            'SELECT order_id, user_id, order_type, revenue, date_paid FROM orders ORDER BY order_id LIMIT ? OFFSET ?',
-            [pageSize, pageOffset]
-        );
+        const query =
+            paymentStatus === 'unpaid'
+                ? `
+            SELECT order_id, user_id, order_type, revenue, date_paid 
+            FROM orders 
+            WHERE date_paid IS NULL AND order_type = 'sale' 
+            ORDER BY order_id 
+            LIMIT ? 
+            OFFSET ?
+        `
+                : `
+            SELECT order_id, user_id, order_type, revenue, date_paid 
+            FROM orders 
+            ORDER BY order_id 
+            LIMIT ? 
+            OFFSET ?
+        `;
+        const [results] = await executePreparedStatement(query, [
+            pageSize,
+            pageOffset,
+        ]);
 
         const orders: OrderSummary[] = results.map((order) => ({
             orderId: order.order_id,
@@ -111,6 +124,8 @@ router.get('', async (req, res, next) => {
 });
 
 router.post('/:orderId/pay', isAdmin, async (req, res, next) => {
+    const connection = await pool.getConnection();
+
     try {
         const orderId = req.params.orderId;
 
@@ -121,9 +136,14 @@ router.post('/:orderId/pay', isAdmin, async (req, res, next) => {
             profit: null,
         };
 
+        console.log('Starting payment transaction');
+        await connection.beginTransaction();
+        console.log('Successfully started payment transaction');
+
         let [results] = await executePreparedStatement(
             'SELECT revenue, user_id, product_id FROM `orders` WHERE order_id = ?',
-            [orderId]
+            [orderId],
+            connection
         );
 
         orderData.revenue = results[0].revenue;
@@ -134,7 +154,8 @@ router.post('/:orderId/pay', isAdmin, async (req, res, next) => {
 
         [results] = await executePreparedStatement(
             'SELECT selling_price - unit_cost AS profit FROM `products` WHERE product_id = ?',
-            [orderData.productId]
+            [orderData.productId],
+            connection
         );
         orderData.profit = results[0].profit;
 
@@ -142,26 +163,38 @@ router.post('/:orderId/pay', isAdmin, async (req, res, next) => {
 
         await executePreparedStatement(
             'UPDATE orders SET date_paid = CURDATE(), profit = ? WHERE order_id = ?',
-            [orderData.profit, orderId]
+            [orderData.profit, orderId],
+            connection
         );
         console.log('Successfully updated paid order');
 
         await executePreparedStatement(
             'UPDATE `users` SET balance = balance - ? WHERE user_id = ?',
-            [orderData.revenue, orderData.userId]
+            [orderData.revenue, orderData.userId],
+            connection
         );
 
         console.log('Successfully updated customer balance');
 
         await executePreparedStatement(
             'UPDATE products SET total_revenue = total_revenue + ?, total_profit = total_profit + ? WHERE product_id = ?',
-            [orderData.revenue, orderData.profit, orderData.productId]
+            [orderData.revenue, orderData.profit, orderData.productId],
+            connection
         );
 
         console.log('Successfully updated profits for product');
+        await connection.commit();
+        console.log('Transaction successful');
 
         res.send({ message: 'payment made' });
     } catch (e: any) {
+        console.log(
+            'Failed to complete payment transaction ... rolling back changes'
+        );
+
+        await connection.rollback();
+        console.log('Changes rolled back');
+
         next(new InternalServerError('Failed to register payment', e));
     }
 });
