@@ -7,6 +7,8 @@ import {
     OrderType,
 } from '../../contracts/order';
 import { queryWithValues, executePreparedStatement } from '../../db/queries';
+import pool from '../../db/pool';
+
 import { auth, getUserId } from '../../middleware/auth';
 import InternalServerError from '../../errors/InternalServerError';
 
@@ -38,7 +40,13 @@ router.get('', async (req, res, next) => {
 });
 
 router.post('/new', getUserId, async (req, res, next) => {
+    const connection = await pool.getConnection();
+
     try {
+        console.log('Starting order transaction');
+        await connection.beginTransaction();
+        console.log('Successfully started order transaction');
+
         const insertValues: (string | number)[][] = req.body.orders.map(
             (order: CustomerOrderRequest) => [
                 order.productId,
@@ -53,7 +61,8 @@ router.post('/new', getUserId, async (req, res, next) => {
 
         await queryWithValues(
             'INSERT INTO orders (product_id, user_id, date_ordered, purchase_location, order_type, quantity, revenue) VALUES ?',
-            [insertValues]
+            [insertValues],
+            connection
         );
         console.log('Successfully added orders');
 
@@ -67,11 +76,12 @@ router.post('/new', getUserId, async (req, res, next) => {
         const queryString =
             'UPDATE products SET stock_level = stock_level - ?, total_value = total_value - ?, total_orders = total_orders + ? WHERE product_id = ?';
 
-        updateValues.forEach(async (order: (string | number)[]) => {
-            await queryWithValues(queryString, [...order]);
-
-            console.log('Successfully updated product');
-        });
+        await Promise.all(
+            updateValues.map((order: (string | number)[]) => {
+                return queryWithValues(queryString, [...order], connection);
+            })
+        );
+        console.log('Successfully updated all products');
 
         const customerBalance = req.body.orders.reduce(
             (accumulator: number, currentValue: Order) =>
@@ -81,12 +91,23 @@ router.post('/new', getUserId, async (req, res, next) => {
 
         await executePreparedStatement(
             'UPDATE `users` SET balance = balance + ? WHERE user_id = ?',
-            [customerBalance, req.body.userId]
+            [customerBalance, req.body.userId],
+            connection
         );
         console.log('Successfully updated customer balance');
 
+        await connection.commit();
+        console.log('Transaction successful');
+
         res.status(201).send({ message: 'created new order' });
     } catch (e: any) {
+        console.log(
+            'Failed to complete order transaction ... rolling back changes'
+        );
+
+        await connection.rollback();
+        console.log('Changes rolled back');
+
         next(new InternalServerError('Failed to register order', undefined, e));
     }
 });
