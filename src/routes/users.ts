@@ -4,7 +4,11 @@ import { User, UserPreview } from '../contracts/user';
 import { FavouriteProduct } from '../contracts/product';
 import { CustomerOrder } from '../contracts/order';
 
-import { executePreparedStatement, queryWithValues } from '../db/queries';
+import {
+    executePreparedStatement,
+    query,
+    queryWithValues,
+} from '../db/queries';
 import { auth, isAdmin } from '../middleware/auth';
 import { hashPassword } from '../utils/password';
 import { Intervals } from '../constants/pagination';
@@ -44,10 +48,36 @@ router.get('/', isAdmin, async (req, res, next) => {
     }
 });
 
+router.get('/total', async (_, res, next) => {
+    try {
+        const [results] = await query('SELECT COUNT(*) AS total FROM `users`');
+
+        console.log('Retrieved total users');
+
+        res.send({ total: results[0].total });
+    } catch (e: any) {
+        next(
+            new InternalServerError(
+                'Failed to fetch the total number of users',
+                undefined,
+                e
+            )
+        );
+    }
+});
+
 router.get('/:userId', async (req, res, next) => {
     try {
         const [results] = await executePreparedStatement(
-            "SELECT user_id, role, CONCAT(first_name, ' ', last_name) AS full_name, email, telephone, balance_due_date, balance, (SELECT COUNT(order_id) FROM `orders` WHERE orders.user_id = ?) AS total_orders, (SELECT SUM(revenue) FROM `orders` WHERE orders.user_id = ?) AS total_revenue FROM `users` WHERE user_id = ?",
+            `SELECT user_id, role, CONCAT(first_name, ' ', last_name) AS full_name, email, telephone, balance_due_date, balance, (
+                    SELECT COUNT(order_id) 
+                    FROM orders WHERE orders.user_id = ?
+                ) AS total_orders, (
+                    SELECT SUM(revenue) 
+                    FROM orders 
+                    WHERE orders.user_id = ?
+                ) AS total_revenue 
+            FROM users WHERE user_id = ?`,
             [req.params.userId, req.params.userId, req.params.userId]
         );
 

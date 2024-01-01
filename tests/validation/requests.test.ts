@@ -52,6 +52,7 @@ describe('requests', () => {
                         {
                             dateOrdered: '2020/01/01',
                             productId: '1',
+                            userId: '1',
                             quantity: 1,
                             revenue: 2000,
                         },
@@ -65,6 +66,7 @@ describe('requests', () => {
                         {
                             dateOrdered: '2020/01/01',
                             productId: '1',
+                            userId: '1',
                             quantity: 0,
                             revenue: -0.1,
                         },

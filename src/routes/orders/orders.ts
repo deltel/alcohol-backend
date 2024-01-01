@@ -9,7 +9,7 @@ import {
 import { queryWithValues, executePreparedStatement } from '../../db/queries';
 import pool from '../../db/pool';
 
-import { auth, getUserId } from '../../middleware/auth';
+import { auth } from '../../middleware/auth';
 import InternalServerError from '../../errors/InternalServerError';
 
 const router = express.Router();
@@ -39,8 +39,9 @@ router.get('', async (req, res, next) => {
     }
 });
 
-router.post('/new', getUserId, async (req, res, next) => {
+router.post('/new', async (req, res, next) => {
     const connection = await pool.getConnection();
+    const userId = req.body.orders[0].userId;
 
     try {
         console.log('Starting order transaction');
@@ -50,7 +51,7 @@ router.post('/new', getUserId, async (req, res, next) => {
         const insertValues: (string | number)[][] = req.body.orders.map(
             (order: CustomerOrderRequest) => [
                 order.productId,
-                req.body.userId,
+                userId,
                 order.dateOrdered,
                 'in store',
                 OrderType.SALE,
@@ -91,7 +92,7 @@ router.post('/new', getUserId, async (req, res, next) => {
 
         await executePreparedStatement(
             'UPDATE `users` SET balance = balance + ? WHERE user_id = ?',
-            [customerBalance, req.body.userId],
+            [customerBalance, userId],
             connection
         );
         console.log('Successfully updated customer balance');
