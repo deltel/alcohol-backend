@@ -106,7 +106,11 @@ export function validateCustomerOrder(requestBody: {
         );
 
     for (const order of requestBody.orders) {
-        if (Object.keys(order).length !== 4 || isEmpty(order.productId)) {
+        if (
+            Object.keys(order).length !== 5 ||
+            isEmpty(order.productId) ||
+            isEmpty(order.userId)
+        ) {
             errors.properties = 'Incorrect details provided for order(s)';
         }
         if (!validDate(order.dateOrdered)) {
