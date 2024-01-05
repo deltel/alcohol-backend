@@ -106,7 +106,7 @@ router.get('/:productId/orders', isAdmin, async (req, res, next) => {
     }
 });
 
-router.post('/new', async (req, res, next) => {
+router.post('', async (req, res, next) => {
     const {
         productName,
         volume,

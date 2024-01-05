@@ -16,7 +16,7 @@ import InternalServerError from '../../errors/InternalServerError';
 const router = express.Router();
 router.use(isAdmin);
 
-router.post('/new', getUserId, async (req, res, next) => {
+router.post('', getUserId, async (req, res, next) => {
     const userId = req.body.userId;
     const connection = await pool.getConnection();
 
@@ -41,7 +41,11 @@ router.post('/new', getUserId, async (req, res, next) => {
         );
 
         await queryWithValues(
-            'INSERT INTO orders (product_id, user_id, date_ordered, purchase_location, date_paid, order_type, quantity, cost, revenue, profit) VALUES ?',
+            `
+                INSERT INTO orders 
+                    (product_id, user_id, date_ordered, purchase_location, date_paid, order_type, quantity, cost, revenue, profit) 
+                VALUES ?
+            `,
             [insertValues],
             connection
         );
@@ -57,7 +61,11 @@ router.post('/new', getUserId, async (req, res, next) => {
         await Promise.all(
             updateValues.map((order: (string | number)[]) =>
                 queryWithValues(
-                    'UPDATE products SET stock_level = stock_level + ?, total_cost = total_cost + ?, total_value = total_value + ? WHERE product_id = ?',
+                    `
+                        UPDATE products 
+                        SET stock_level = stock_level + ?, total_cost = total_cost + ?, total_value = total_value + ? 
+                        WHERE product_id = ?
+                    `,
                     [...order],
                     connection
                 )
@@ -90,15 +98,15 @@ router.get('', async (req, res, next) => {
         const query =
             paymentStatus === 'unpaid'
                 ? `
-            SELECT order_id, user_id, order_type, revenue, date_paid 
+            SELECT order_id, user_id, order_type, revenue, date_paid, amount_paid 
             FROM orders 
-            WHERE date_paid IS NULL AND order_type = 'sale' 
+            WHERE order_type = 'sale' AND (date_paid IS NULL OR amount_paid <> revenue) 
             ORDER BY order_id 
             LIMIT ? 
             OFFSET ?
         `
                 : `
-            SELECT order_id, user_id, order_type, revenue, date_paid 
+            SELECT order_id, user_id, order_type, revenue, date_paid, amount_paid 
             FROM orders 
             ORDER BY order_id 
             LIMIT ? 
@@ -114,6 +122,7 @@ router.get('', async (req, res, next) => {
             userId: order.user_id,
             revenue: order.revenue,
             datePaid: order.date_paid,
+            amountPaid: order.amount_paid,
             orderType: order.order_type,
         }));
 
@@ -123,11 +132,12 @@ router.get('', async (req, res, next) => {
     }
 });
 
-router.post('/:orderId/pay', isAdmin, async (req, res, next) => {
+router.post('/:orderId', isAdmin, async (req, res, next) => {
     const connection = await pool.getConnection();
 
     try {
         const orderId = req.params.orderId;
+        const paymentAmount = req.body.amount;
 
         const orderData = {
             revenue: null,
@@ -152,37 +162,20 @@ router.post('/:orderId/pay', isAdmin, async (req, res, next) => {
 
         console.log('Successfully retrieved order data');
 
-        [results] = await executePreparedStatement(
-            'SELECT selling_price - unit_cost AS profit FROM `products` WHERE product_id = ?',
-            [orderData.productId],
-            connection
-        );
-        orderData.profit = results[0].profit;
-
-        console.log('Successfully retrieved the profit');
-
         await executePreparedStatement(
-            'UPDATE orders SET date_paid = CURDATE(), profit = ? WHERE order_id = ?',
-            [orderData.profit, orderId],
+            'UPDATE orders SET date_paid = CURDATE(), amount_paid = amount_paid + ? WHERE order_id = ?',
+            [paymentAmount, orderId],
             connection
         );
-        console.log('Successfully updated paid order');
+        console.log('Successfully updated order payment information');
 
         await executePreparedStatement(
             'UPDATE `users` SET balance = balance - ? WHERE user_id = ?',
-            [orderData.revenue, orderData.userId],
+            [paymentAmount, orderData.userId],
             connection
         );
-
         console.log('Successfully updated customer balance');
 
-        await executePreparedStatement(
-            'UPDATE products SET total_revenue = total_revenue + ?, total_profit = total_profit + ? WHERE product_id = ?',
-            [orderData.revenue, orderData.profit, orderData.productId],
-            connection
-        );
-
-        console.log('Successfully updated profits for product');
         await connection.commit();
         console.log('Transaction successful');
 
@@ -202,7 +195,15 @@ router.post('/:orderId/pay', isAdmin, async (req, res, next) => {
 router.get('/:orderId', async (req, res, next) => {
     try {
         const [results] = await executePreparedStatement(
-            'SELECT product_name, CONCAT(first_name, " ", last_name) AS customer_name, date_ordered, purchase_location, date_paid, order_type, quantity, cost, revenue, profit FROM `orders` INNER JOIN products ON orders.product_id = products.product_id INNER JOIN users ON orders.user_id = users.user_id WHERE order_id = ?',
+            `
+                SELECT product_name, CONCAT(first_name, " ", last_name) AS customer_name, date_ordered, purchase_location, date_paid, order_type, quantity, cost, revenue, profit, amount_paid 
+                FROM orders 
+                INNER JOIN products 
+                ON orders.product_id = products.product_id 
+                INNER JOIN users 
+                ON orders.user_id = users.user_id 
+                WHERE order_id = ?
+            `,
             [req.params.orderId]
         );
 
@@ -210,6 +211,7 @@ router.get('/:orderId', async (req, res, next) => {
             productName: results[0].product_name,
             dateOrdered: results[0].date_ordered,
             datePaid: results[0].date_paid,
+            amountPaid: results[0].amount_paid,
             orderType: results[0].order_type,
             profit: results[0].profit,
             purchaseLocation: results[0].purchase_location,
