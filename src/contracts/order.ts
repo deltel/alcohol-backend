@@ -21,10 +21,14 @@ export interface Order {
 export type OrderSummary = Pick<
     Order,
     'userId' | 'revenue' | 'datePaid' | 'orderType'
-> & { orderId: string };
+> & {
+    orderId: string;
+    amountPaid: number | null;
+};
 
 export type OrderDetails = ProductOrder & {
     customerName: string;
+    amountPaid: number | null;
 };
 
 export type ProductOrder = Omit<

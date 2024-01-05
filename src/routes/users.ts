@@ -156,7 +156,7 @@ router.get('/:userId/orders', async (req, res, next) => {
     }
 });
 
-router.post('/new', isAdmin, async (req, res, next) => {
+router.post('', isAdmin, async (req, res, next) => {
     const { firstName, lastName, email, role, telephone, password } = req.body;
 
     try {

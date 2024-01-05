@@ -39,7 +39,7 @@ router.get('', async (req, res, next) => {
     }
 });
 
-router.post('/new', async (req, res, next) => {
+router.post('', async (req, res, next) => {
     const connection = await pool.getConnection();
     const userId = req.body.orders[0].userId;
 
@@ -71,11 +71,16 @@ router.post('/new', async (req, res, next) => {
             order.quantity,
             order.revenue,
             order.quantity,
+            order.revenue,
+            order.quantity,
             order.productId,
         ]);
 
-        const queryString =
-            'UPDATE products SET stock_level = stock_level - ?, total_value = total_value - ?, total_orders = total_orders + ? WHERE product_id = ?';
+        const queryString = `
+                UPDATE products 
+                SET stock_level = stock_level - ?, total_value = total_value - ?, total_orders = total_orders + ?, total_revenue = total_revenue + ?, total_profit = total_profit + (selling_price - unit_cost) * ? 
+                WHERE product_id = ?
+            `;
 
         await Promise.all(
             updateValues.map((order: (string | number)[]) => {
